@@ -148,3 +148,113 @@ root/
 
 - Design each service to be modular and independently scalable.
 - Avoid tight coupling between microservices.
+
+### API Best Practices
+
+### 1. Use RESTful Principles
+
+- Design your API around **resources** (entities or objects), and use standard HTTP methods (GET, POST, PUT, DELETE) to perform operations on them.
+- Ensure your API endpoints represent nouns, not actions.
+  - **Correct**: `/users`, `/products`, `/orders`
+  - **Incorrect**: `/getUser`, `/createOrder`
+
+### 2. Version Your API
+
+- **Versioning** is crucial to support backward compatibility as your API evolves.
+- Use **URL Path Versioning** (e.g., `/v1/products`, `/v2/products`),
+- Follow **Semantic Versioning** (`major.minor.patch`) to indicate changes (e.g., `v1.2.3`).
+
+### 3. Use Meaningful and Consistent Naming
+
+- Ensure endpoint names are **plural** to represent collections (e.g., `/users`, `/products`).
+- Use **camelCase** or **snake_case** for naming query parameters and request bodies consistently.
+- Avoid using **verbs** in the endpoint paths, as HTTP methods already convey the action.
+  - **Correct**: `/users/{id}`, `/orders/{orderId}`
+  - **Incorrect**: `/getUser/{id}`, `/createOrder`
+
+### 4. HTTP Status Codes
+
+- Use the correct HTTP status codes to indicate the result of the request:
+  - **200 OK**: The request was successful (GET, PUT, PATCH).
+  - **201 Created**: Resource was successfully created (POST).
+  - **400 Bad Request**: Invalid request format or missing parameters.
+  - **401 Unauthorized**: User is not authenticated.
+  - **403 Forbidden**: User is authenticated but not authorized.
+  - **404 Not Found**: Resource not found.
+  - **500 Internal Server Error**: An error occurred on the server.
+
+### 5. Use Consistent Data Formats
+
+- Prefer **JSON** for data interchange. Avoid using XML unless necessary.
+- Stick to a consistent data format for all responses and requests.
+  - **Correct**: `application/json`
+  - **Incorrect**: Mixing `application/json` and `text/xml` in different endpoints.
+
+### 6. Security
+
+- Always use **HTTPS** to encrypt traffic and protect sensitive data.
+- Implement **authentication** (e.g., OAuth2, JWT) to ensure only authorized users can access your API.
+- Use **rate limiting** to prevent abuse and ensure the API is available for all users.
+- Sanitize inputs to prevent **SQL Injection**, **XSS**, and **other attacks**.
+
+### 7. Error Handling and Messages
+
+- Provide **clear error messages** with meaningful HTTP status codes.
+- Include an error **code**, **message**, and **details** when returning errors to help users understand what went wrong.
+  - Example:
+    ```json
+    {
+      "error": {
+        "code": "INVALID_USER_ID",
+        "message": "The provided user ID is invalid.",
+        "details": "The user ID must be a positive integer."
+      }
+    }
+    ```
+- Avoid exposing sensitive server information in error messages.
+
+### 8. Pagination and Filtering
+
+- Use **pagination** for endpoints that return large lists of items to prevent overloading the server or client.
+- Implement filtering, sorting, and searching capabilities for list endpoints.
+  - Example: `/items?limit=20&page=2&sort=price&filter=category:electronics`
+
+### 9. Use HTTP Headers Effectively
+
+- Use headers for **metadata** (e.g., pagination details like `X-Total-Count`).
+- **Authorization** should always be included in headers, typically using the `Authorization` header for JWT or API keys.
+
+### 10. Rate Limiting
+
+- Implement **rate limiting** to avoid abuse of your API and ensure fair access.
+- Provide headers to indicate rate limits, e.g., `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+
+### 11. Request and Response Body Structure
+
+- **Request**:
+  - Use **JSON Schema** or **OpenAPI** specifications to validate incoming data.
+  - Keep the request bodies **simple** and **flat**, avoid deeply nested structures.
+- **Response**:
+  - Keep responses consistent in structure across all endpoints.
+  - Return only the necessary data and avoid sending redundant or unnecessary information.
+  - Use **status** codes, **pagination metadata**, and **error messages** as needed.
+
+### 12. Caching
+
+- Use **caching** mechanisms to improve performance by reducing the need to recompute expensive requests.
+- Use appropriate cache headers like `Cache-Control`, `ETag`, and `Last-Modified`.
+
+### 13. Use HATEOAS (Hypermedia as the Engine of Application State)
+
+- If applicable, provide **hyperlinks** to related resources to improve discoverability.
+- For example:
+  ```json
+  {
+    "id": 1,
+    "name": "Product A",
+    "links": [
+      { "rel": "self", "href": "/products/1" },
+      { "rel": "reviews", "href": "/products/1/reviews" }
+    ]
+  }
+  ```
