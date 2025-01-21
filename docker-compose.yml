@@ -68,8 +68,6 @@ services:
       - config/.env
   nginx:
     image: nginx:alpine-slim
-    depends_on:
-      - app
     ports:
       - 85:80
     volumes:
