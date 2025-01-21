@@ -18,10 +18,10 @@ services:
       - pg
       - redis
     volumes:
-      - medias:/medias
-      - static:/static
+      - account/medias:/medias
+      - account/static:/static
     env_file:
-      - config/.env
+      - account/config/.env
   inventory:
     build:
       context: inventory
