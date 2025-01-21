@@ -61,14 +61,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -94,12 +86,44 @@ USE_I18N = True
 USE_TZ = True
 
 
-STATIC_URL = "http://localhost:85/static"
+STATIC_URL = "http://localhost:85/static/"
 STATIC_ROOT = BASE_DIR / "static"
 
-MEDIA_URL = "http://localhost:85/medias"
+MEDIA_URL = "http://localhost:85/medias/"
 
 MEDIA_ROOT = BASE_DIR / "medias"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+DATABASES = {
+    "production": {
+        "ENGINE": "django.db.backends.postgresql",
+        "CONN_MAX_AGE": None,
+        "CONN_HEALTH_CHECKS": False,
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT"),
+        "OPTIONS": {
+            "client_encoding": "UTF8",
+        },
+        "USE_TZ": False,
+    },
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    },
+}

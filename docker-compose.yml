@@ -9,7 +9,7 @@ services:
       - 5454:5432
     volumes:
       - pg-data:/var/lib/postgresql/data
-    env_file: config/.env
+    env_file: config/pg.env
 
   account:
     build:
@@ -18,8 +18,9 @@ services:
       - pg
       - redis
     volumes:
-      - account/medias:/medias
-      - account/static:/static
+      - medias:/app/medias
+      - static:/app/static
+      - ./account:/app
     env_file:
       - account/config/.env
   inventory:
