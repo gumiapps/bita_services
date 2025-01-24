@@ -22,7 +22,7 @@ services:
       - static:/app/static
       - ./account:/app
     env_file:
-      - account/config/.env
+      - config/account.env
   inventory:
     build:
       context: inventory
@@ -30,10 +30,10 @@ services:
       - pg
       - redis
     volumes:
-      - medias:/medias
-      - static:/static
+      - medias:/app/medias
+      - static:/app/static
     env_file:
-      - config/.env
+      - config/inventory.env
   market:
     build:
       context: market
@@ -41,10 +41,10 @@ services:
       - pg
       - redis
     volumes:
-      - medias:/medias
-      - static:/static
+      - medias:/app/medias
+      - static:/app/static
     env_file:
-      - config/.env
+      - config/market.env
   notification:
     build:
       context: sale
@@ -52,10 +52,10 @@ services:
       - pg
       - redis
     volumes:
-      - medias:/medias
-      - static:/static
+      - medias:/app/medias
+      - static:/app/static
     env_file:
-      - config/.env
+      - config/notification.env
   sale:
     build:
       context: sale
@@ -63,10 +63,10 @@ services:
       - pg
       - redis
     volumes:
-      - medias:/medias
-      - static:/static
+      - medias:/app/medias
+      - static:/app/static
     env_file:
-      - config/.env
+      - config/sale.env
   nginx:
     image: nginx:alpine-slim
     ports:
