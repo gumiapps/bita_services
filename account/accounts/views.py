@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 from rest_framework import generics, status, viewsets
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import (
@@ -90,6 +91,9 @@ class PasswordChangeView(generics.UpdateAPIView):
         return Response(
             {"detail": "Password has been changed."}, status=status.HTTP_200_OK
         )
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PATCH")
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

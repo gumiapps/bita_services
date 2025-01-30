@@ -93,3 +93,220 @@ Once the application is running, you can access it at `http://localhost:8000`.
 You can use either swagger or redoc to browse the API docs and try out the request and response formats.
 - **Swagger** - `http://localhost:8000/swagger/`
 - **Redoc** - `http://localhost:8000/redoc/`
+
+## API Endpoints
+
+### Authentication
+
+- **POST /token**
+  - Description: Authenticates a user and returns a JWT access token and a refresh token as well as the logged in user data.
+  - Request Body: 
+    ```json
+    {
+     "phone": "912121212", 
+     "password": "testpass123" 
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczODM0MDk2OSwiaWF0IjoxNzM4MjU0NTY5LCJqdGkiOiIzODk2ZDE2OWZmYmE0MTFkODAwNTAwNTg2MTdhYjEwYSIsInVzZXJfaWQiOjEsImVtYWlsIjoiYWxlYmVAZ21haWwuY29tIiwidXNlcm5hbWUiOiIifQ.QzsSNGaXGqJzydyFv9saw8Gyh53iWPipuNGfPYqDp-M",
+        "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM4MjU0ODY5LCJpYXQiOjE3MzgyNTQ1NjksImp0aSI6ImQ0Y2JhMzYxNGY3NTQ0MTRhMTcxYTVjNTFjMDJiZTU4IiwidXNlcl9pZCI6MSwiZW1haWwiOiJhbGViZUBnbWFpbC5jb20iLCJ1c2VybmFtZSI6IiJ9.l2nQrnktyRlyeKeBYeT2gu10ZWs4_NATL_T7SAd9HXU",
+        "user": {
+            "id": 1,
+            "email": "alebe@gmail.com",
+            "username": "",
+            "first_name": "Alebe",
+            "last_name": "",
+            "phone": "924384072"
+        }
+    }
+    ```
+
+- **POST /token/refresh**
+  - Description: Accepts a valid JWT refresh token and returns a new access token.
+  - Request Body: 
+    ```json
+    {
+        "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczODM0MDk2OSwiaWF0IjoxNzM4MjU0NTY5LCJqdGkiOiIzODk2ZDE2OWZmYmE0MTFkODAwNTAwNTg2MTdhYjEwYSIsInVzZXJfaWQiOjEsImVtYWlsIjoiYWxlYmVAZ21haWwuY29tIiwidXNlcm5hbWUiOiIifQ.QzsSNGaXGqJzydyFv9saw8Gyh53iWPipuNGfPYqDp-M"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM4MjU1MTU2LCJpYXQiOjE3MzgyNTQ1NjksImp0aSI6IjI1M2M2NmRkZDk2YzRlN2RhZGYzOTRjNzk1YTBkOTlkIiwidXNlcl9pZCI6MSwiZW1haWwiOiJhbGViZUBnbWFpbC5jb20iLCJ1c2VybmFtZSI6IiJ9.y5g_Gm8m6Zzrdsc7pRJV3W63bgs0h9YXbY8NNxnrH3A"
+    }
+    ```
+
+### Password Management APIs
+
+- **PUT /password-change**
+  - Description: Accepts an old password and a new password from an authenticated user and changes the password from the old one to the new one.
+  - Prerequisite: A valid access token in the HTTP Authorization header. e.g `Bearer {token}` and a correct old_password parameter
+  - Request Body: 
+    ```json
+    {
+        "old_password": "testpass123",
+        "new_password": "testpass321",
+        "new_password_confirm": "testpass321"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "detail": "Password has been changed."
+    }
+    ```
+
+- **POST /password-reset**
+  - Description: Accepts an email account and sends out a password reset email to that account.
+  - Request Body: 
+    ```json
+    {
+        "email": "account@example.com"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "detail": "Password reset link sent."
+    }
+    ```
+
+- **POST /password-reset-confirm/{uidb64}/{token}**
+  - Description: Sent out in the password reset email and only works if uidb64 and token are correct. It resets the password of a user who forgot their password.
+  - Prerequisite: A correct token and uidb64 in the url.
+  - Request Body: 
+    ```json
+    {
+        "password": "string",
+        "password_confirm": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "detail": "Password has been reset."
+    }
+    ```
+
+### User management APIs
+
+- **GET /users?page={page_number}**
+  - Description: Returns a list of registered users paginated 10 at a time.
+  - Prerequisites: Must have a valid access token in the Authorization header and must be a superuser / admin.
+  - Successful Response Body: 
+    ```json
+    {
+        "count": 2,
+        "next": null,
+        "previous": null,
+        "results": [
+            {
+                "email": "user1@gmail.com",
+                "first_name": "user1",
+                "last_name": "",
+                "phone": "91313131313",
+                "username": ""
+            },
+            {
+                "email": "user3@gmail.com",
+                "first_name": "user3",
+                "last_name": "",
+                "phone": "91414141414",
+                "username": ""
+            }
+        ]
+    }
+    ```
+
+- **POST /users**
+  - Description: Registeres a new regular user account
+  - Request Body:
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ",
+        "password": "testpass123"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ"
+    }
+    ```
+
+- **GET /users/{id}**
+  - Description: Returns details about a user queried by id.
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ"
+    }
+    ```
+
+- **PUT /users/{id}**
+  - Description: Edits all the fields of a user account
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - Request Body:
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string2",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string2",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ"
+    }
+    ```
+
+- **PATCH /users/{id}**
+  - Description: Edits one or more of the fields shown in the example request body of a user account
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - Request Body:
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string2",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string2",
+        "phone": "981051299",
+        "username": "ObDJAPuoSDHZ"
+    }
+    ```
+
+- **DELETE /users/{id}**
+  - Description: Deletes a user account
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - On success it sends out a 204 http status code with no response body
