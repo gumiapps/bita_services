@@ -14,12 +14,13 @@ class User(AbstractUser):
                 message="Phone number must be entered in the format: '912345678 / 712345678'. Up to 9 digits allowed.",
             )
         ],
+        unique=True,
     )
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = "phone"
-    REQUIRED_FIELDS = ["phone", "first_name"]
+    REQUIRED_FIELDS = ["first_name"]
 
     def __str__(self):
         return self.email

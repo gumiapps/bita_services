@@ -198,7 +198,7 @@ class UserCRUDAPITestCase(APITestCase):
     def test_authentication(self):
         url = reverse("token_obtain_pair")
         data = {
-            "email": self.regular_user.email,
+            "phone": self.regular_user.phone,
             "password": "userpass123",
         }
         response = self.client.post(url, data, format="json")

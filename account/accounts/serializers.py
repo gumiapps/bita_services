@@ -8,15 +8,12 @@ from rest_framework import serializers
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from environs import Env
 
-# Initialize environs
-env = Env()
-env.read_env()  # read .env file, if it exists
 
 User = get_user_model()
 
-email_url = env.str("NOTIFICATION_API_URL") + "/api/send-single-email/"
+email_url = settings.EMAIL_URL
+notification_api_key = settings.NOTIFICATION_API_KEY
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -68,7 +65,7 @@ class PasswordResetSerializer(serializers.Serializer):
             }
         )
         headers = {
-            "Authorization": f"Api-Key {env.str('NOTIFICATION_API_KEY')}",
+            "Authorization": f"Api-Key {notification_api_key}",
             "Content-Type": "application/json",
         }
         response = requests.request("POST", email_url, headers=headers, data=payload)
