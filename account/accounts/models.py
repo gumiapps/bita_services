@@ -5,8 +5,7 @@ from .manager import CustomUserManager
 
 
 class User(AbstractUser):
-    username = models.CharField(max_length=125)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True)  # Overriden to make it unique
     phone = models.CharField(
         max_length=15,
         validators=[
@@ -16,15 +15,11 @@ class User(AbstractUser):
             )
         ],
     )
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
 
     objects = CustomUserManager()
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["phone"]
+    USERNAME_FIELD = "phone"
+    REQUIRED_FIELDS = ["phone", "first_name"]
 
     def __str__(self):
         return self.email
