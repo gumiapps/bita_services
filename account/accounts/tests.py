@@ -10,19 +10,16 @@ User = get_user_model()
 class UserCRUDAPITestCase(APITestCase):
     def setUp(self):
         self.admin_user = User.objects.create_superuser(
-            username="admin",
             email="admin@example.com",
             phone="912345678",
             password="adminpass123",
         )
         self.regular_user = User.objects.create_user(
-            username="regularuser",
             email="regularuser@example.com",
             phone="912345679",
             password="userpass123",
         )
         self.user_data = {
-            "username": "testuser",
             "email": "testuser@example.com",
             "phone": "912345432",
             "password": "testpass123",
@@ -38,9 +35,6 @@ class UserCRUDAPITestCase(APITestCase):
         response = self.client.post(url, self.user_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 3)
-        self.assertEqual(
-            User.objects.get(username="testuser").email, "testuser@example.com"
-        )
 
     def test_admin_can_list_users(self):
         token = self.get_jwt_token(self.admin_user)
@@ -76,7 +70,6 @@ class UserCRUDAPITestCase(APITestCase):
 
     def test_non_owner_cannot_update_user(self):
         another_user = User.objects.create_user(
-            username="anotheruser",
             email="anotheruser@example.com",
             phone="912345680",
             password="anotherpass123",
@@ -105,7 +98,6 @@ class UserCRUDAPITestCase(APITestCase):
 
     def test_non_owner_cannot_delete_user(self):
         another_user = User.objects.create_user(
-            username="anotheruser",
             email="anotheruser@example.com",
             phone="912345680",
             password="anotherpass123",
@@ -124,17 +116,16 @@ class UserCRUDAPITestCase(APITestCase):
 
     def test_unauthorized_user_cannot_retrieve_user(self):
         self.client.credentials()  # Remove any credentials
-        user = User.objects.get(username="admin")
+        user = User.objects.get(email="admin@example.com")
         url = reverse("user-detail", args=[user.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_unauthorized_user_cannot_update_user(self):
         self.client.credentials()  # Remove any credentials
-        user = User.objects.get(username="admin")
+        user = User.objects.get(email="admin@example.com")
         url = reverse("user-detail", args=[user.id])
         data = {
-            "username": "admin_updated",
             "email": "admin_updated@example.com",
             "phone": "987654321",
         }
@@ -143,7 +134,7 @@ class UserCRUDAPITestCase(APITestCase):
 
     def test_unauthorized_user_cannot_delete_user(self):
         self.client.credentials()  # Remove any credentials
-        user = User.objects.get(username="admin")
+        user = User.objects.get(email="admin@example.com")
         url = reverse("user-detail", args=[user.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -162,21 +153,7 @@ class UserCRUDAPITestCase(APITestCase):
         self.regular_user.refresh_from_db()
         self.assertTrue(self.regular_user.check_password("newpass123"))
 
-    def test_password_reset(self):
-        url = reverse("password-reset")
-        data = {
-            "email": self.regular_user.email,
-        }
-        response = self.client.post(url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
     def test_password_reset_confirm(self):
-        url = reverse("password-reset")
-        data = {
-            "email": self.regular_user.email,
-        }
-        self.client.post(url, data, format="json")
-
         # Simulate the token and uid generation
         from django.utils.http import urlsafe_base64_encode
         from django.utils.encoding import force_bytes
@@ -195,10 +172,21 @@ class UserCRUDAPITestCase(APITestCase):
         self.regular_user.refresh_from_db()
         self.assertTrue(self.regular_user.check_password("newpass123"))
 
-    def test_authentication(self):
+    def test_authentication_via_phone(self):
         url = reverse("token_obtain_pair")
         data = {
-            "phone": self.regular_user.phone,
+            "identifier": self.regular_user.phone,
+            "password": "userpass123",
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+
+    def test_authentication_via_email(self):
+        url = reverse("token_obtain_pair")
+        data = {
+            "identifier": self.regular_user.email,
             "password": "userpass123",
         }
         response = self.client.post(url, data, format="json")

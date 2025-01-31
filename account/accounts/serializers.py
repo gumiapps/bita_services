@@ -1,6 +1,6 @@
 import json
 import requests
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -19,7 +19,7 @@ notification_api_key = settings.NOTIFICATION_API_KEY
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "phone", "username", "password")
+        fields = ("email", "first_name", "last_name", "phone", "password")
         extra_kwargs = {
             "password": {"write_only": True},
         }
@@ -32,12 +32,16 @@ class UserSerializer(serializers.ModelSerializer):
         return fields
 
     def create(self, validated_data):
-        password = validated_data.pop("password", None)
-        user = super().create(validated_data)
-        if password:
-            user.set_password(password)
-            user.save()
-        return user
+        email = validated_data.get("email")
+        phone = validated_data.get("phone")
+        if email or phone:
+            password = validated_data.pop("password", None)
+            user = super().create(validated_data)
+            if password:
+                user.set_password(password)
+                user.save()
+            return user
+        raise serializers.ValidationError("Email or phone is required.")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -110,26 +114,31 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        # Add custom claims
-        token["email"] = user.email
-        token["username"] = user.username
-        return token
+    username_field = "identifier"
 
     def validate(self, attrs):
-        data = super().validate(attrs)
-        data.update(
-            {
-                "user": {
-                    "id": self.user.id,
-                    "email": self.user.email,
-                    "username": self.user.username,
-                    "first_name": self.user.first_name,
-                    "last_name": self.user.last_name,
-                    "phone": self.user.phone,
-                }
-            }
+        identifier = attrs.get("identifier")
+        password = attrs.get("password", "")
+        if not identifier or not password:
+            raise serializers.ValidationError("Identifier and password are required.")
+
+        user = authenticate(
+            request=self.context.get("request"), username=identifier, password=password
         )
+        if not user:
+            raise serializers.ValidationError("Invalid credentials.")
+
+        refresh = self.get_token(user)
+        data = {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "phone": user.phone,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            },
+        }
+
         return data

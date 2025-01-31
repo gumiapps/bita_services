@@ -5,7 +5,8 @@ from .manager import CustomUserManager
 
 
 class User(AbstractUser):
-    email = models.EmailField(unique=True)  # Overriden to make it unique
+    username = None
+    email = models.EmailField(unique=True, blank=True)  # Overriden to make it unique
     phone = models.CharField(
         max_length=15,
         validators=[
@@ -15,12 +16,13 @@ class User(AbstractUser):
             )
         ],
         unique=True,
+        blank=True,
     )
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = "phone"
-    REQUIRED_FIELDS = ["first_name", "email"]
+    REQUIRED_FIELDS = ["first_name"]
 
     def __str__(self):
         return self.email

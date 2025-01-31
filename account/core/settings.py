@@ -148,3 +148,8 @@ SPECTACULAR_SETTINGS = {
 
 EMAIL_URL = env.str("NOTIFICATION_API_URL") + "/api/send-single-email/"
 NOTIFICATION_API_KEY = env.str("NOTIFICATION_API_KEY")
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailOrPhoneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
