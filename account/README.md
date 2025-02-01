@@ -99,11 +99,11 @@ You can use either swagger or redoc to browse the API docs and try out the reque
 ### Authentication
 
 - **POST /token**
-  - Description: Authenticates a user and returns a JWT access token and a refresh token as well as the logged in user data.
+  - Description: Accepts a phone number or email and authenticates a user and returns a JWT access token and a refresh token as well as the logged in user data.
   - Request Body: 
     ```json
     {
-     "phone": "912121212", 
+     "identifier": "912121212", 
      "password": "testpass123" 
     }
     ```
