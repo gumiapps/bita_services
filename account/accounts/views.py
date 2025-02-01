@@ -10,13 +10,15 @@ from .serializers import (
     PasswordChangeSerializer,
     UserSerializer,
     CustomTokenObtainPairSerializer,
+    SupplierSerializer,
+    CustomerSerializer,
 )
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .permissions import IsOwnerOrAdmin
-from .models import User
+from .models import User, Supplier, Customer
 from django.shortcuts import render
 
 User = get_user_model()
@@ -98,6 +100,18 @@ class PasswordChangeView(generics.UpdateAPIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class SupplierViewSet(viewsets.ModelViewSet):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
 
 def api_documentation(request):

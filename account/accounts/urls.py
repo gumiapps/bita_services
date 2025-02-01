@@ -8,6 +8,8 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     UserViewSet,
+    SupplierViewSet,
+    CustomerViewSet,
     PasswordResetView,
     PasswordResetConfirmView,
     PasswordChangeView,
@@ -17,6 +19,8 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r"users", UserViewSet)
+router.register(r"suppliers", SupplierViewSet)
+router.register(r"customers", CustomerViewSet)
 
 urlpatterns = [
     path("", api_documentation, name="api_documentation"),
