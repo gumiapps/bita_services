@@ -310,3 +310,233 @@ You can use either swagger or redoc to browse the API docs and try out the reque
   - Description: Deletes a user account
   - Prerequisites: The request user must be a superuser or the owner of the queried account.
   - On success it sends out a 204 http status code with no response body
+
+### Customer management APIs
+
+- **GET /customers?page={page_number}**
+  - Description: Returns a list of registered customers paginated 10 at a time.
+  - Prerequisites: Must have a valid access token in the Authorization header and must be a superuser / admin.
+  - Successful Response Body: 
+    ```json
+    {
+        "count": 123,
+        "next": "http://api.example.org/customers/?page=4",
+        "previous": "http://api.example.org/customers/?page=2",
+        "results": [
+          {
+            "id": 0,
+            "first_name": "string",
+            "last_name": "string",
+            "phone": "914398326",
+            "email": "user@example.com",
+            "address": "string"
+          }
+        ]
+    }
+    ```
+
+- **POST /customers**
+  - Description: Registeres a new customer
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - Request Body:
+    ```json
+    {
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "900740695",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "927650842",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **GET /customers/{id}**
+  - Description: Returns details about a customer queried by id.
+  - Prerequisites: The request user must be a superuser.
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "945367584",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **PUT /costomers/{id}**
+  - Description: Edits all the fields of a customer.
+  - Prerequisites: The request user must be a superuser.
+  - Request Body:
+    ```json
+    {
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "959346791",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "947028458",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **PATCH /customers/{id}**
+  - Description: Edits one or more of the fields shown in the example request body of a customer
+  - Prerequisites: The request user must be a superuser.
+  - Request Body:
+    ```json
+    {
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "959346791",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "947028458",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **DELETE /customers/{id}**
+  - Description: Deletes a customer.
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - On success it sends out a 204 http status code with no response body
+
+### Supplier management APIs
+
+- **GET /suppliers?page={page_number}**
+  - Description: Returns a list of registered suppliers paginated 10 at a time.
+  - Prerequisites: Must have a valid access token in the Authorization header and must be a superuser / admin.
+  - Successful Response Body: 
+    ```json
+    {
+        "count": 123,
+        "next": "http://api.example.org/suppliers/?page=4",
+        "previous": "http://api.example.org/suppliers/?page=2",
+        "results": [
+          {
+            "id": 0,
+            "name": "string",
+            "phone": "914398326",
+            "email": "user@example.com",
+            "address": "string"
+          }
+        ]
+    }
+    ```
+
+- **POST /suppliers**
+  - Description: Registeres a new supplier
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - Request Body:
+    ```json
+    {
+        "name": "string",
+        "phone": "900740695",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "name": "string",
+        "phone": "927650842",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **GET /suppliers/{id}**
+  - Description: Returns details about a supplier queried by id.
+  - Prerequisites: The request user must be a superuser.
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "name": "string",
+        "phone": "945367584",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **PUT /suppliers/{id}**
+  - Description: Edits all the fields of a supplier.
+  - Prerequisites: The request user must be a superuser.
+  - Request Body:
+    ```json
+    {
+        "name": "string",
+        "phone": "959346791",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "name": "string",
+        "phone": "947028458",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **PATCH /suppliers/{id}**
+  - Description: Edits one or more of the fields shown in the example request body of a supplier
+  - Prerequisites: The request user must be a superuser.
+  - Request Body:
+    ```json
+    {
+        "name": "string",
+        "phone": "959346791",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "name": "string",
+        "phone": "947028458",
+        "email": "user@example.com",
+        "address": "string"
+    }
+    ```
+
+- **DELETE /suppliers/{id}**
+  - Description: Deletes a supplier.
+  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - On success it sends out a 204 http status code with no response body
