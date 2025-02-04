@@ -1,10 +1,7 @@
-
-
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 
 SECRET_KEY = "django-insecure-#$v_sv39h&bcr3cs(urra+ff97$u*l6!bw=fciz@8$xlppyu5b"
@@ -14,8 +11,6 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -23,8 +18,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'rest_framework',
-    'inventory',
+    "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    "inventory",
 ]
 
 MIDDLEWARE = [
@@ -69,8 +66,6 @@ DATABASES = {
 }
 
 
-
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -87,7 +82,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
@@ -97,10 +91,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-
-
 STATIC_URL = "static/"
-
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -112,4 +103,14 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": [],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Inventory service API",
+    "DESCRIPTION": "Inventory Management API",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
 }
