@@ -4,70 +4,95 @@ import enum
 from django.utils.translation import gettext as _
 from django.core.exceptions import ValidationError
 import requests
+
+
 # Create your models here.
 class Category(models.Model):
     name = models.CharField(max_length=255)
-    description=models.TextField(null=True,blank=True)
+    description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
         db_table = "category"
         get_latest_by = "id"
         ordering = ["id"]
+
     def __str__(self):
         return self.name
-    
+
+
 class Location(models.Model):
     lat = models.DecimalField(null=True, max_digits=12, decimal_places=10)
     lng = models.DecimalField(null=True, max_digits=13, decimal_places=10)
-    region = models.CharField(null=True,max_length=255)
-    zone = models.CharField(null=True,max_length=255)
-    woreda = models.CharField(null=True,max_length=255)
-    kebele = models.CharField(null=True,max_length=255)
-    city = models.CharField(null=True,max_length=255)
-    sub_city = models.CharField(null=True,max_length=255)
+    region = models.CharField(null=True, max_length=255)
+    zone = models.CharField(null=True, max_length=255)
+    woreda = models.CharField(null=True, max_length=255)
+    kebele = models.CharField(null=True, max_length=255)
+    city = models.CharField(null=True, max_length=255)
+    sub_city = models.CharField(null=True, max_length=255)
+
     class Meta:
         db_table = "location"
         get_latest_by = "id"
         ordering = ["id"]
+
     def __str__(self):
-        return f'{self.city} {self.sub_city}'
+        return f"{self.city} {self.sub_city}"
+
 
 class Store(models.Model):
-    business_id=models.IntegerField()
-    name=models.CharField(max_length=255)
-    location=models.OneToOneField(Location,on_delete=models.CASCADE,related_name='locations')
+    business_id = models.IntegerField()
+    name = models.CharField(max_length=255)
+    location = models.OneToOneField(
+        Location, on_delete=models.CASCADE, related_name="locations"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
-        db_table='store'
+        db_table = "store"
         get_latest_by = "id"
         ordering = ["id"]
+
     def __str__(self):
         return self.name
 
-class Manufacture(models.Model):
-    name=models.CharField(max_length=255)
+
+class Manufacturer(models.Model):
+    name = models.CharField(max_length=255)
     logo_url = models.URLField(blank=True, null=True)
-    manufacturer_type = models.CharField(max_length=255, blank=True, null=True)  
+    manufacturer_type = models.CharField(max_length=255, blank=True, null=True)
+
     class Meta:
-        db_table='manfacture'
-        get_latest_by="id"
-        ordering=['id']
+        db_table = "manfacturer"
+        get_latest_by = "id"
+        ordering = ["id"]
+
     def __str__(self):
         return self.name
-    
+
+
 class Item(models.Model):
     name = models.CharField(max_length=255)
-    description=models.TextField(null=True,blank=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL,null=True, blank=True,related_name='items')
+    description = models.TextField(null=True, blank=True)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="items"
+    )
     barcode = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    manufacture=models.ForeignKey(Manufacture,on_delete=models.SET_NULL,null=True,blank=True,related_name='manufactures')
-    is_returnable=models.BooleanField(default=True)
-    notify_below=models.IntegerField()
-    isvisible=models.BooleanField(default=True)
+    manufacturer = models.ForeignKey(
+        Manufacturer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="items",
+    )
+    is_returnable = models.BooleanField(default=True)
+    notify_below = models.IntegerField()
+    isvisible = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
         db_table = "item"
         get_latest_by = "id"
@@ -76,34 +101,41 @@ class Item(models.Model):
     def __str__(self):
         return self.name
 
+
 class ItemImage(models.Model):
-    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='item_images')
-    image_id = models.IntegerField() 
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="item_images")
+    image_id = models.IntegerField()
+
     class Meta:
-        db_table = "item_image"  
-        get_latest_by = "id"    
-        ordering = ["id"]        
+        db_table = "item_image"
+        get_latest_by = "id"
+        ordering = ["id"]
 
     def __str__(self):
         return self.image_id
 
+
 class ReturnRecall(models.Model):
-    PENDING='P'
-    APPROVED='A'
-    REJECTED='R'
+    PENDING = "P"
+    APPROVED = "A"
+    REJECTED = "R"
     STATUS_CHOICES = [
-        (PENDING, 'Pending'),
-        (APPROVED, 'Approved'),
-        (REJECTED, 'Rejected'),
+        (PENDING, "Pending"),
+        (APPROVED, "Approved"),
+        (REJECTED, "Rejected"),
     ]
-    status=models.CharField(max_length=1,choices=STATUS_CHOICES,default=PENDING)
-    item=models.ForeignKey(Item,models.SET_NULL,null=True,blank=True,related_name='items')
-    reason=models.TextField(null=True,blank=True)
-    quantity=models.IntegerField(validators=[MinValueValidator(1)])
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=PENDING)
+    item = models.ForeignKey(
+        Item, models.SET_NULL, null=True, blank=True, related_name="items"
+    )
+    reason = models.TextField(null=True, blank=True)
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateField(auto_now_add=True)
+
     def __str__(self):
         return f"ReturnRecall ({self.status}) - {self.quantity} items"
+
 
 class Supply(models.Model):
     units = [
@@ -128,42 +160,56 @@ class Supply(models.Model):
         _("Pack (pk)"),
         _("Set (set)"),
     ]
-   
-    item=models.ForeignKey(Item,models.CASCADE,related_name='item_supply',default=1)
-    quantity=models.PositiveIntegerField(validators=[MinValueValidator(1)])
+
+    item = models.ForeignKey(
+        Item, models.CASCADE, related_name="item_supply", default=1
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     sale_price = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        validators=[MinValueValidator(1)])
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(1)]
+    )
     cost_price = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        validators=[MinValueValidator(1)])
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(1)]
+    )
     unit = models.CharField(max_length=255, choices=map(lambda x: (x, x), units))
-    expiration_date =  models.DateField(null=True, blank=True)
+    expiration_date = models.DateField(null=True, blank=True)
     batch_number = models.CharField(max_length=255, unique=True)
     man_date = models.DateField(null=True, blank=True)
-    store=models.ForeignKey(Store,on_delete=models.CASCADE,related_name='stores')
-    supplier_id=models.IntegerField()
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="stores")
+    supplier_id = models.IntegerField()
+
     class Meta:
         db_table = "supply"
         get_latest_by = "id"
         ordering = ["id"]
+
     def __str__(self):
         return self.item.name
 
-    
-    
+
 class StockMovement(models.Model):
-    supply=models.ForeignKey(Supply,on_delete=models.SET_NULL,null=True,blank=True)
-    from_store = models.ForeignKey(Store, on_delete=models.SET_NULL, related_name="outgoing_movements",null=True,blank=True)
-    to_store = models.ForeignKey(Store, on_delete=models.SET_NULL,related_name="incoming_movements",null=True,blank=True)
-    quantity=models.PositiveIntegerField()
-    reason=models.TextField(null=True,blank=True)
+    supply = models.ForeignKey(Supply, on_delete=models.SET_NULL, null=True, blank=True)
+    from_store = models.ForeignKey(
+        Store,
+        on_delete=models.SET_NULL,
+        related_name="outgoing_movements",
+        null=True,
+        blank=True,
+    )
+    to_store = models.ForeignKey(
+        Store,
+        on_delete=models.SET_NULL,
+        related_name="incoming_movements",
+        null=True,
+        blank=True,
+    )
+    quantity = models.PositiveIntegerField()
+    reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
+
     class Meta:
-        db_table='stockmovement'
+        db_table = "stockmovement"
         get_latest_by = "id"
         ordering = ["id"]
 

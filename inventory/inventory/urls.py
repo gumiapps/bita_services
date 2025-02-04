@@ -5,17 +5,15 @@ from rest_framework_nested import routers
 from django.urls.conf import include
 
 router = DefaultRouter()
-router.register('items', views.ItemViewSet, basename='items')
-router.register('categorys', views.CategoryViewSet,basename='categorys')
-router.register('supply',views.SupplyViewSet,basename='supplys')
-router.register('store',views.StoreViewSet,basename='stores')
-router.register('location',views.LocationViewSet,basename='locations')
-router.register('StockMovement',views.StockMovementViewSet)
+router.register("items", views.ItemViewSet, basename="items")
+router.register("categories", views.CategoryViewSet, basename="categories")
+router.register("supply", views.SupplyViewSet, basename="supplies")
+router.register("store", views.StoreViewSet, basename="stores")
+router.register("location", views.LocationViewSet, basename="locations")
+router.register("stock-movement", views.StockMovementViewSet)
 
-items_router = routers.NestedDefaultRouter(
-    router, 'items', lookup='item')
-items_router.register('images', views.ItemImageViewSet,
-                         basename='item-images')
+items_router = routers.NestedDefaultRouter(router, "items", lookup="item")
+items_router.register("images", views.ItemImageViewSet, basename="item-images")
 
 
 # URLConf
