@@ -80,12 +80,12 @@ class Item(models.Model):
         Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="items"
     )
     barcode = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    manufacture = models.ForeignKey(
+    manufacturer = models.ForeignKey(
         Manufacturer,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="manufactures",
+        related_name="items",
     )
     is_returnable = models.BooleanField(default=True)
     notify_below = models.IntegerField()

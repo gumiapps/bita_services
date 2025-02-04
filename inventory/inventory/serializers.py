@@ -28,6 +28,7 @@ class ItemSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "category",
+            "manufacturer",
             "barcode",
             "is_returnable",
             "notify_below",

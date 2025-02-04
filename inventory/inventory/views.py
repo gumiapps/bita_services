@@ -1,6 +1,9 @@
 from django.shortcuts import render
+from django.conf import settings
 from django.db.models.aggregates import Count
+from django.contrib.postgres.search import TrigramSimilarity
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from drf_spectacular.utils import extend_schema
 
 from .models import (
     Category,
@@ -32,14 +35,42 @@ class CategoryViewSet(ModelViewSet):
 
 
 class ItemViewSet(ModelViewSet):
+    serializer_class = ItemSerializer
+
+    @extend_schema(parameters=settings.ITEM_LIST_QUERY_PARAMETERS)
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = Item.objects.all()
         category_id = self.request.query_params.get("category_id")
-        if category_id is not None:
+        if category_id:
             queryset = queryset.filter(category_id=category_id)
-        return queryset
 
-    serializer_class = ItemSerializer
+        manufacturer_id = self.request.query_params.get("manufacturer_id")
+        if manufacturer_id:
+            queryset = queryset.filter(manufacturer_id=manufacturer_id)
+
+        visible = self.request.query_params.get("visible")
+        if visible is not None:
+            queryset = queryset.filter(isvisible=visible.lower() == "true")
+
+        returnable = self.request.query_params.get("returnable")
+        if returnable is not None:
+            queryset = queryset.filter(is_returnable=returnable.lower() == "true")
+
+        search_term = self.request.query_params.get("search")
+        if search_term:
+            queryset = (
+                queryset.annotate(
+                    similarity=TrigramSimilarity("name", search_term) * 2
+                    + TrigramSimilarity("description", search_term)
+                )
+                .filter(similarity__gt=0.1)
+                .order_by("-similarity")
+            )
+
+        return queryset
 
 
 class SupplyViewSet(ModelViewSet):

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -63,11 +64,11 @@ WSGI_APPLICATION = "core.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USER"),
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST"),
-        "PORT": os.environ.get("DB_PORT"),
+        "NAME": os.environ.get("DB_NAME", "inventory"),
+        "USER": os.environ.get("DB_USER", "inventory_user"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "testpass123"),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
 
@@ -122,3 +123,36 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "REDOC_DIST": "SIDECAR",
 }
+
+ITEM_LIST_QUERY_PARAMETERS = [
+    OpenApiParameter(
+        name="category_id",
+        description="Filter by category ID",
+        required=False,
+        type=OpenApiTypes.INT,
+    ),
+    OpenApiParameter(
+        name="manufacturer_id",
+        description="Filter by manufacturer ID",
+        required=False,
+        type=OpenApiTypes.INT,
+    ),
+    OpenApiParameter(
+        name="visible",
+        description="Filter by visibility (true/false)",
+        required=False,
+        type=OpenApiTypes.BOOL,
+    ),
+    OpenApiParameter(
+        name="returnable",
+        description="Filter by returnable (true/false)",
+        required=False,
+        type=OpenApiTypes.BOOL,
+    ),
+    OpenApiParameter(
+        name="search",
+        description="Search term",
+        required=False,
+        type=OpenApiTypes.STR,
+    ),
+]
