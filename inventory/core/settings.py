@@ -156,3 +156,12 @@ ITEM_LIST_QUERY_PARAMETERS = [
         type=OpenApiTypes.STR,
     ),
 ]
+
+SUPPLY_RESERVATION_LIST_QUERY_PARAMETERS = [
+    OpenApiParameter(
+        name="status",
+        description="Filter by reservation status (active, cancelled, fulfilled)",
+        required=False,
+        type=OpenApiTypes.STR,
+    ),
+]

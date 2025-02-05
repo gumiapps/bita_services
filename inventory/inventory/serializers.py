@@ -8,6 +8,7 @@ from .models import (
     Supply,
     Store,
     ItemImage,
+    SupplyReservation,
 )
 from .utils import upload_to_file_service, validate_image_file
 
@@ -103,3 +104,20 @@ class ItemImageSerializer(serializers.ModelSerializer):
         item_image = ItemImage.objects.create(file_id=file_id, **validated_data)
 
         return item_image
+
+
+class SupplyReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupplyReservation
+        fields = ["id", "supply", "quantity", "reserved_at", "status"]
+
+    def validate(self, data):
+        supply = data.get("supply")
+        quantity = data.get("quantity")
+        if supply and quantity and quantity > supply.quantity:
+            raise serializers.ValidationError(
+                {
+                    "quantity": "Reservation quantity cannot exceed available supply quantity."
+                }
+            )
+        return data

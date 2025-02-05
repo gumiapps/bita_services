@@ -215,3 +215,27 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"Movement {self.id}: {self.quantity} quantity of {self.supply.name} moved from {self.from_store.name} to {self.to_store.name}"
+
+
+class SupplyReservation(models.Model):
+    supply = models.ForeignKey(
+        Supply, on_delete=models.CASCADE, related_name="reservations"
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    reserved_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("active", "Active"),
+            ("cancelled", "Cancelled"),
+            ("fulfilled", "Fulfilled"),
+        ],
+        default="active",
+    )
+
+    class Meta:
+        db_table = "supply_reservation"
+        ordering = ["-reserved_at"]
+
+    def __str__(self):
+        return f"Reservation for {self.supply} - {self.quantity}"

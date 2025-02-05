@@ -1,8 +1,16 @@
+from decimal import Decimal
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
-
-from .models import Category, Item, Manufacturer
+from .models import (
+    Category,
+    Manufacturer,
+    Location,
+    Store,
+    Item,
+    Supply,
+    SupplyReservation,
+)
 
 
 class TestItemViewSet(APITestCase):
@@ -81,3 +89,140 @@ class TestItemViewSet(APITestCase):
         response_page2 = self.client.get(next_url)
         self.assertEqual(response_page2.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response_page2.data["results"]), 5)
+
+
+class TestSupplyReservation(APITestCase):
+    def setUp(self):
+        # Create a location and a store
+        self.location = Location.objects.create(
+            lat=0,
+            lng=0,
+            region="Test Region",
+            zone="Test Zone",
+            woreda="Test Woreda",
+            kebele="Test Kebele",
+            city="Test City",
+            sub_city="Test Subcity",
+        )
+        self.store = Store.objects.create(
+            business_id=1,
+            name="Test Store",
+            location=self.location,
+        )
+        # Create a simple item (without category/manufacturer details)
+        self.item = Item.objects.create(
+            name="Test Item",
+            description="Test Description",
+            category=None,
+            manufacturer=None,
+            barcode="ABC123",
+            is_returnable=True,
+            notify_below=5,
+            isvisible=True,
+        )
+        # Create a supply linked to the item
+        self.supply = Supply.objects.create(
+            item=self.item,
+            quantity=100,
+            sale_price=Decimal("100.00"),
+            cost_price=Decimal("50.00"),
+            unit="Piece (pc)",
+            expiration_date=None,
+            batch_number="batch001",
+            man_date=None,
+            store=self.store,
+            supplier_id=1,
+        )
+
+    def test_create_supply_reservation(self):
+        url = reverse("reservations-list")
+        data = {"supply": self.supply.id, "quantity": 10}
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["supply"], self.supply.id)
+        self.assertEqual(response.data["quantity"], 10)
+        self.assertEqual(response.data["status"], "active")
+
+    def test_list_supply_reservations(self):
+        # Create two reservations
+        res1 = SupplyReservation.objects.create(supply=self.supply, quantity=5)
+        res2 = SupplyReservation.objects.create(supply=self.supply, quantity=15)
+        url = reverse("reservations-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Ensure that both reservations are returned
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        ids = [res["id"] for res in response.data["results"]]
+        self.assertIn(res1.id, ids)
+        self.assertIn(res2.id, ids)
+
+    def test_update_supply_reservation(self):
+        # Create a reservation then update its status
+        reservation = SupplyReservation.objects.create(supply=self.supply, quantity=20)
+        url = reverse("reservations-detail", args=[reservation.id])
+        data = {"status": "cancelled"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "cancelled")
+
+    def test_delete_supply_reservation(self):
+        # Create a reservation then delete it
+        reservation = SupplyReservation.objects.create(supply=self.supply, quantity=8)
+        url = reverse("reservations-detail", args=[reservation.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SupplyReservation.objects.filter(id=reservation.id).exists())
+
+    def test_invalid_reservation_quantity(self):
+        # Ensure that a reservation with quantity 0 is not allowed
+        url = reverse("reservations-list")
+        data = {"supply": self.supply.id, "quantity": 0}  # invalid quantity
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("quantity", response.data)
+
+    def test_reservation_quantity_exceeds_supply(self):
+        # Assume self.supply.quantity is 100, so reserving 150 should be rejected
+        url = reverse("reservations-list")
+        data = {"supply": self.supply.id, "quantity": 150}
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("quantity", response.data)
+
+    def test_filter_supply_reservations_by_status(self):
+        # Create reservations with different statuses
+        res_active = SupplyReservation.objects.create(
+            supply=self.supply, quantity=10, status="active"
+        )
+        res_cancelled = SupplyReservation.objects.create(
+            supply=self.supply, quantity=5, status="cancelled"
+        )
+        res_fulfilled = SupplyReservation.objects.create(
+            supply=self.supply, quantity=7, status="fulfilled"
+        )
+
+        url = reverse("reservations-list")
+
+        # Filter by "active" status
+        response = self.client.get(url + "?status=active")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], res_active.id)
+
+        # Filter by "cancelled" status
+        response = self.client.get(url + "?status=cancelled")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], res_cancelled.id)
+
+        # Filter by "fulfilled" status
+        response = self.client.get(url + "?status=fulfilled")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], res_fulfilled.id)
+
+        # Filter by an invalid status; expect no results
+        response = self.client.get(url + "?status=nonexistent")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
