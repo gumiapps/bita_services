@@ -237,5 +237,20 @@ class SupplyReservation(models.Model):
         db_table = "supply_reservation"
         ordering = ["-reserved_at"]
 
+    def save(self, *args, **kwargs):
+        # Check if updating an existing record and status has changed to fulfilled.
+        if self.pk:
+            previous = SupplyReservation.objects.get(pk=self.pk)
+            if previous.status != "fulfilled" and self.status == "fulfilled":
+                # Reduce supply quantity by this reservation's quantity.
+                self.supply.quantity = self.supply.quantity - self.quantity
+                self.supply.save()
+        else:
+            # For new records, if the reservation is created as fulfilled.
+            if self.status == "fulfilled":
+                self.supply.quantity = self.supply.quantity - self.quantity
+                self.supply.save()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Reservation for {self.supply} - {self.quantity}"

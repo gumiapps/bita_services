@@ -226,3 +226,26 @@ class TestSupplyReservation(APITestCase):
         response = self.client.get(url + "?status=nonexistent")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 0)
+
+    def test_create_fulfilled_reservation_reduces_supply_quantity(self):
+        # Get the initial supply quantity
+        initial_quantity = self.supply.quantity
+        url = reverse("reservations-list")
+        data = {"supply": self.supply.id, "quantity": 30, "status": "fulfilled"}
+        response = self.client.post(url, data, format="json")
+        self.supply.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Supply quantity should be reduced by 30 immediately upon creation
+        self.assertEqual(self.supply.quantity, initial_quantity - 30)
+
+    def test_fulfilled_reservation_update_reduces_supply_quantity(self):
+        # Create a reservation with status "active"
+        reservation = SupplyReservation.objects.create(supply=self.supply, quantity=20)
+        initial_quantity = self.supply.quantity
+        url = reverse("reservations-detail", args=[reservation.id])
+        data = {"status": "fulfilled"}
+        response = self.client.patch(url, data, format="json")
+        self.supply.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Supply quantity should be reduced by 20 after updating status to fulfilled
+        self.assertEqual(self.supply.quantity, initial_quantity - 20)
