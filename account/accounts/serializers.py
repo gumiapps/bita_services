@@ -127,7 +127,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             request=self.context.get("request"), username=identifier, password=password
         )
         if not user:
-            raise serializers.ValidationError("Invalid credentials.")
+            print(user)
+            raise serializers.ValidationError("No user with these credentials.")
 
         refresh = self.get_token(user)
         data = {

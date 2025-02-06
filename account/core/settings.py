@@ -129,6 +129,7 @@ AUTH_USER_MODEL = "accounts.User"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "accounts.api_key_auth.APIKeyAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -137,13 +138,14 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Authentication service API",
-    "DESCRIPTION": "User Management API",
+    "TITLE": "Bita Authentication Service",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SWAGGER_UI_DIST": "SIDECAR",
-    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
-    "REDOC_DIST": "SIDECAR",
+    "SECURITY": [{"Bearer": []}, {"ApiKey": []}],
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"},
+        "ApiKey": {"type": "apiKey", "in": "header", "name": "X-API-Key"},
+    },
 }
 
 EMAIL_URL = env.str("NOTIFICATION_API_URL") + "/api/send-single-email/"
@@ -153,3 +155,8 @@ AUTHENTICATION_BACKENDS = [
     "accounts.backends.EmailOrPhoneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
+
+API_KEYS = {
+    env.str("INVENTORY_SERVICE_KEY"): "inventory",
+    env.str("TEST_API_KEY"): "test",
+}
