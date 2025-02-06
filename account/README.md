@@ -96,6 +96,8 @@ You can use either swagger or redoc to browse the API docs and try out the reque
 
 ## API Endpoints
 
+- To access the Authentication Service APIs, a valid API key must be provided in the "X-API-Key" http header.
+
 ### Authentication
 
 - **POST /token**
