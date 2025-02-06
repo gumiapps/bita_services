@@ -14,6 +14,7 @@ from .views import (
     PasswordResetConfirmView,
     PasswordChangeView,
     CustomTokenObtainPairView,
+    JWTTokenVerifyView,
     api_documentation,
 )
 
@@ -26,6 +27,7 @@ urlpatterns = [
     path("", api_documentation, name="api_documentation"),
     path("token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("token/verify/", JWTTokenVerifyView.as_view(), name="token_verify"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"

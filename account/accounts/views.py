@@ -3,7 +3,7 @@ from django.contrib.auth import update_session_auth_hash
 from rest_framework import generics, status, viewsets
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenVerifyView
 from .serializers import (
     PasswordResetSerializer,
     SetNewPasswordSerializer,
@@ -16,7 +16,7 @@ from .serializers import (
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from .permissions import IsOwnerOrAdmin
 from .models import User, Supplier, Customer
 from django.shortcuts import render
@@ -112,6 +112,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+
+
+class JWTTokenVerifyView(TokenVerifyView):
+    permission_classes = (AllowAny,)
 
 
 def api_documentation(request):

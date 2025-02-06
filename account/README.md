@@ -138,6 +138,22 @@ You can use either swagger or redoc to browse the API docs and try out the reque
     }
     ```
 
+- **POST /token/verify**
+  - Description: Accepts a JWT access token and returns a success code (200) if it is valid and 401 otherwise
+  - Request Body: 
+    ```json
+    {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczODM0MDk2OSwiaWF0IjoxNzM4MjU0NTY5LCJqdGkiOiIzODk2ZDE2OWZmYmE0MTFkODAwNTAwNTg2MTdhYjEwYSIsInVzZXJfaWQiOjEsImVtYWlsIjoiYWxlYmVAZ21haWwuY29tIiwidXNlcm5hbWUiOiIifQ.QzsSNGaXGqJzydyFv9saw8Gyh53iWPipuNGfPYqDp-M"
+    }
+    ```
+  - Error Response Body: 
+    ```json
+    {
+        "detail": "Token is invalid or expired",
+        "code": "token_not_valid"
+    }
+    ```
+
 ### Password Management APIs
 
 - **PUT /password-change**
