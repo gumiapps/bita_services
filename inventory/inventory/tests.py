@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -5,8 +6,24 @@ from rest_framework import status
 from .models import Category, Item, Manufacturer
 
 
+class DummyUser:
+    id = 1
+    email = "test@example.com"
+    first_name = "Test"
+    last_name = "User"
+    phone = "123456789"
+    is_authenticated = True
+
+
 class TestItemViewSet(APITestCase):
     def setUp(self):
+        self.auth_patcher = patch(
+            "inventory.authentication.RemoteJWTAuthentication.authenticate",
+            return_value=(DummyUser(), "testtoken"),
+        )
+        self.auth_patcher.start()
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer testtoken")
+
         self.category1 = Category.objects.create(name="Category 1")
         self.category2 = Category.objects.create(name="Category 2")
         self.manufacturer1 = Manufacturer.objects.create(name="Manufacturer 1")
@@ -22,6 +39,9 @@ class TestItemViewSet(APITestCase):
                 is_returnable=(i % 4 == 0),
                 notify_below=5,
             )
+
+    def tearDown(self):
+        self.auth_patcher.stop()
 
     def test_filter_by_category(self):
         url = "/inventory/items/?category_id={}".format(self.category1.id)
