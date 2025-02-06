@@ -20,6 +20,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from .permissions import IsOwnerOrAdmin
 from .models import User, Supplier, Customer
 from django.shortcuts import render
+from rest_framework_simplejwt.tokens import AccessToken
 
 User = get_user_model()
 
@@ -116,6 +117,30 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 class JWTTokenVerifyView(TokenVerifyView):
     permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            # Validate the token using the parent serializer
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            return Response(
+                {"detail": "Token is invalid or expired"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Decode token and fetch user data
+        token = request.data.get("token")
+        access_token = AccessToken(token)
+        user_id = access_token.get("user_id")
+        user = User.objects.get(id=user_id)
+        user_data = UserSerializer(user).data
+        user_data.update({"id": user_id})
+
+        return Response(
+            {"detail": "Token is valid", "user": user_data},
+            status=status.HTTP_200_OK,
+        )
 
 
 def api_documentation(request):

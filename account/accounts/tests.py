@@ -523,3 +523,32 @@ class CustomerSupplierPermissionTestCase(APITestCase):
         data = {"name": "Admin Updated Supplier"}
         response = self.client.patch(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class JWTTokenVerifyTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="testuser@example.com",
+            phone="912345678",
+            password="testpass123",
+            first_name="Test",
+            last_name="User",
+        )
+
+    def get_jwt_token(self, user):
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
+
+    def test_valid_token_verification(self):
+        token = self.get_jwt_token(self.user)
+        url = reverse("token_verify")
+        response = self.client.post(url, {"token": token}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("user", response.data)
+        self.assertEqual(response.data["user"]["email"], self.user.email)
+
+    def test_invalid_token_verification(self):
+        url = reverse("token_verify")
+        response = self.client.post(url, {"token": "invalidtoken"}, format="json")
+        # Expecting a 401 Unauthorized for an invalid token
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

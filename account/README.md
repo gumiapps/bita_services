@@ -146,11 +146,17 @@ You can use either swagger or redoc to browse the API docs and try out the reque
         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczODM0MDk2OSwiaWF0IjoxNzM4MjU0NTY5LCJqdGkiOiIzODk2ZDE2OWZmYmE0MTFkODAwNTAwNTg2MTdhYjEwYSIsInVzZXJfaWQiOjEsImVtYWlsIjoiYWxlYmVAZ21haWwuY29tIiwidXNlcm5hbWUiOiIifQ.QzsSNGaXGqJzydyFv9saw8Gyh53iWPipuNGfPYqDp-M"
     }
     ```
-  - Error Response Body: 
+  - Successful Response Body: 
     ```json
     {
-        "detail": "Token is invalid or expired",
-        "code": "token_not_valid"
+        "detail": "Token is valid",
+        "user": {
+          "email": "testuser@gmail.com",
+          "first_name": "",
+          "last_name": "",
+          "phone": "912345678",
+          "id": 1
+        }
     }
     ```
 
