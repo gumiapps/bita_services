@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import RegexValidator
 from .manager import CustomUserManager
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -41,6 +42,13 @@ class Supplier(models.Model):
     )
     email = models.EmailField()
     address = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="suppliers",
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return self.name
@@ -60,6 +68,13 @@ class Customer(models.Model):
     )
     email = models.EmailField()
     address = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="customers",
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

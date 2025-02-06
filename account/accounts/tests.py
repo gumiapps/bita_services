@@ -397,3 +397,129 @@ class CustomerCRUDAPITestCase(APITestCase):
         url = reverse("customer-detail", args=[customer.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class CustomerSupplierPermissionTestCase(APITestCase):
+    def setUp(self):
+        # Create users
+        self.admin_user = User.objects.create_superuser(
+            email="admin@example.com",
+            phone="912345678",
+            password="adminpass123",
+        )
+        self.regular_user = User.objects.create_user(
+            email="regular@example.com",
+            phone="912345679",
+            password="userpass123",
+        )
+        # Sample data for customer and supplier
+        self.customer_data = {
+            "first_name": "Customer",
+            "last_name": "Test",
+            "phone": "912345678",
+            "email": "customer@example.com",
+            "address": "Customer Address",
+        }
+        self.supplier_data = {
+            "name": "Supplier Test",
+            "phone": "912345678",
+            "email": "supplier@example.com",
+            "address": "Supplier Address",
+        }
+
+    def get_jwt_token(self, user):
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
+
+    # --- Customer endpoint tests ---
+
+    def test_owner_can_update_own_customer(self):
+        token = self.get_jwt_token(self.regular_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Create customer with created_by set to the regular user
+        customer = Customer.objects.create(
+            created_by=self.regular_user, **self.customer_data
+        )
+        url = reverse("customer-detail", args=[customer.id])
+        data = {
+            "first_name": "Updated",
+            "last_name": customer.last_name,
+            "phone": customer.phone,
+            "email": customer.email,
+            "address": customer.address,
+        }
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        customer.refresh_from_db()
+        self.assertEqual(customer.first_name, "Updated")
+
+    def test_non_owner_cannot_update_customer(self):
+        # Create a customer with created_by as a different user
+        owner = User.objects.create_user(
+            email="owner@example.com",
+            phone="912345100",
+            password="ownerpass123",
+        )
+        customer = Customer.objects.create(created_by=owner, **self.customer_data)
+        token = self.get_jwt_token(self.regular_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("customer-detail", args=[customer.id])
+        data = {"first_name": "Hacked"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_update_any_customer(self):
+        customer = Customer.objects.create(
+            created_by=self.regular_user, **self.customer_data
+        )
+        token = self.get_jwt_token(self.admin_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("customer-detail", args=[customer.id])
+        data = {"first_name": "AdminUpdated"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # --- Supplier endpoint tests ---
+
+    def test_owner_can_update_own_supplier(self):
+        token = self.get_jwt_token(self.regular_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        supplier = Supplier.objects.create(
+            created_by=self.regular_user, **self.supplier_data
+        )
+        url = reverse("supplier-detail", args=[supplier.id])
+        data = {
+            "name": "Updated Supplier",
+            "phone": supplier.phone,
+            "email": supplier.email,
+            "address": supplier.address,
+        }
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        supplier.refresh_from_db()
+        self.assertEqual(supplier.name, "Updated Supplier")
+
+    def test_non_owner_cannot_update_supplier(self):
+        owner = User.objects.create_user(
+            email="owner2@example.com",
+            phone="912345222",
+            password="ownerpass222",
+        )
+        supplier = Supplier.objects.create(created_by=owner, **self.supplier_data)
+        token = self.get_jwt_token(self.regular_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("supplier-detail", args=[supplier.id])
+        data = {"name": "Hacked Supplier"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_update_any_supplier(self):
+        supplier = Supplier.objects.create(
+            created_by=self.regular_user, **self.supplier_data
+        )
+        token = self.get_jwt_token(self.admin_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("supplier-detail", args=[supplier.id])
+        data = {"name": "Admin Updated Supplier"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -7,4 +7,6 @@ class IsOwnerOrAdmin(BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
+        if hasattr(obj, "created_by"):
+            return obj.created_by == request.user or request.user.is_staff
         return obj == request.user or request.user.is_staff
