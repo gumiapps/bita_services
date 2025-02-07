@@ -27,6 +27,7 @@ from .permissions import (
     EmployeeUpdatePermission,
     EmployeeDeletePermission,
     EmployeeRetrievePermission,
+    IsNonEmployeeUser,
 )
 from .models import User, Supplier, Customer, Business, Employee
 from django.shortcuts import render
@@ -138,6 +139,8 @@ class BusinessViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "list":
             self.permission_classes = [IsAuthenticated, IsAdminUser]
+        elif self.action == "create":
+            self.permission_classes = [IsAuthenticated, IsNonEmployeeUser]
         else:
             self.permission_classes = [IsAuthenticated, IsBusinessOwnerOrAdmin]
         return super().get_permissions()

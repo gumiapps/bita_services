@@ -134,3 +134,10 @@ class EmployeeRetrievePermission(BasePermission):
 
         # Allow if target has a lower role value.
         return hierarchy[target.role] < hierarchy[requester.role]
+
+
+class IsNonEmployeeUser(BasePermission):
+    def has_permission(self, request, view):
+        if request.method == "POST":
+            return not Employee.objects.filter(id=request.user.id).exists()
+        return True
