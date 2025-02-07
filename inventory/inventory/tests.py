@@ -113,6 +113,13 @@ class TestItemViewSet(APITestCase):
 
 class TestSupplyReservation(APITestCase):
     def setUp(self):
+        self.auth_patcher = patch(
+            "inventory.authentication.RemoteJWTAuthentication.authenticate",
+            return_value=(DummyUser(), "testtoken"),
+        )
+        self.auth_patcher.start()
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer testtoken")
+
         # Create a location and a store
         self.location = Location.objects.create(
             lat=0,
@@ -153,6 +160,9 @@ class TestSupplyReservation(APITestCase):
             store=self.store,
             supplier_id=1,
         )
+
+    def tearDown(self):
+        self.auth_patcher.stop()
 
     def test_create_supply_reservation(self):
         url = reverse("reservations-list")
