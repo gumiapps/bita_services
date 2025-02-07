@@ -12,13 +12,22 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     SupplierSerializer,
     CustomerSerializer,
+    BusinessSerializer,
+    EmployeeSerializer,
 )
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
-from .permissions import IsOwnerOrAdmin
-from .models import User, Supplier, Customer
+from .permissions import (
+    IsOwnerOrAdmin,
+    IsBusinessOwnerOrAdmin,
+    EmployeeCreatePermission,
+    EmployeeUpdatePermission,
+    EmployeeDeletePermission,
+    EmployeeRetrievePermission,
+)
+from .models import User, Supplier, Customer, Business, Employee
 from django.shortcuts import render
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -113,6 +122,40 @@ class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+
+
+class BusinessViewSet(viewsets.ModelViewSet):
+    queryset = Business.objects.all()
+    serializer_class = BusinessSerializer
+
+    def get_permissions(self):
+        if self.action == "list":
+            self.permission_classes = [IsAuthenticated, IsAdminUser]
+        else:
+            self.permission_classes = [IsAuthenticated, IsBusinessOwnerOrAdmin]
+        return super().get_permissions()
+
+
+class EmployeeViewSet(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+
+    def get_permissions(self):
+        if self.action == "create":
+            self.permission_classes = [IsAuthenticated, EmployeeCreatePermission]
+        elif self.action in ["update", "partial_update"]:
+            self.permission_classes = [
+                IsAuthenticated,
+                IsOwnerOrAdmin,
+                EmployeeUpdatePermission,
+            ]
+        elif self.action == "destroy":
+            self.permission_classes = [IsAuthenticated, EmployeeDeletePermission]
+        elif self.action == "retrieve":
+            self.permission_classes = [IsAuthenticated, EmployeeRetrievePermission]
+        else:
+            self.permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+        return super().get_permissions()
 
 
 class JWTTokenVerifyView(TokenVerifyView):

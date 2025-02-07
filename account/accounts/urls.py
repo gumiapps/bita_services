@@ -10,6 +10,8 @@ from .views import (
     UserViewSet,
     SupplierViewSet,
     CustomerViewSet,
+    EmployeeViewSet,
+    BusinessViewSet,
     PasswordResetView,
     PasswordResetConfirmView,
     PasswordChangeView,
@@ -22,6 +24,8 @@ router = DefaultRouter()
 router.register(r"users", UserViewSet)
 router.register(r"suppliers", SupplierViewSet)
 router.register(r"customers", CustomerViewSet)
+router.register(r"employees", EmployeeViewSet)
+router.register(r"businesses", BusinessViewSet)
 
 urlpatterns = [
     path("", api_documentation, name="api_documentation"),

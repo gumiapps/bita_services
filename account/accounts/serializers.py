@@ -8,7 +8,7 @@ from rest_framework import serializers
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Supplier, Customer
+from .models import Supplier, Customer, Business, Employee
 
 
 User = get_user_model()
@@ -140,6 +140,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "phone": user.phone,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
+                "role": user.role if hasattr(user, "role") else None,
             },
         }
 
@@ -156,3 +157,36 @@ class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = "__all__"
+
+
+class BusinessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Business
+        fields = "__all__"
+
+
+class EmployeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = (
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone",
+            "password",
+            "role",
+            "created_by",
+            "business",
+        )
+        extra_kwargs = {
+            "password": {"write_only": True},
+        }
+
+    def create(self, validated_data):
+        password = validated_data.pop("password", None)
+        employee = Employee(**validated_data)
+        if password:
+            employee.set_password(password)
+        employee.save()
+        return employee
