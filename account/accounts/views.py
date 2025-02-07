@@ -237,7 +237,7 @@ class EmployeeInvitationAcceptView(generics.GenericAPIView):
 
     permission_classes = [AllowAny]
 
-    def get(self, request, token):
+    def post(self, request, token):
         try:
             invitation = EmployeeInvitation.objects.get(token=token, accepted=False)
         except EmployeeInvitation.DoesNotExist:
@@ -256,6 +256,7 @@ class EmployeeInvitationAcceptView(generics.GenericAPIView):
         employee.first_name = invitation.first_name
         employee.last_name = invitation.last_name
         employee.role = invitation.role
+        employee.created_by = invitation.created_by
         employee.save()
 
         # Mark invitation as accepted.
