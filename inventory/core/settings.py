@@ -104,11 +104,11 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.BasicAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "inventory.authentication.RemoteJWTAuthentication",
     ],
-    "DEFAULT_PERMISSION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
@@ -165,3 +165,6 @@ SUPPLY_RESERVATION_LIST_QUERY_PARAMETERS = [
         type=OpenApiTypes.STR,
     ),
 ]
+
+AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL")
+AUTH_SERVICE_API_KEY = os.environ.get("AUTH_SERVICE_API_KEY")
