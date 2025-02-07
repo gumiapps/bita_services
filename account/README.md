@@ -569,7 +569,7 @@ You can use either swagger or redoc to browse the API docs and try out the reque
 
 - **GET /businesses?page={page_number}**
   - Description: Returns a list of registered businesses paginated 10 at a time.
-  - Prerequisites: Must have a valid access token in the Authorization header.
+  - Prerequisites: Must be a superuser.
   - Successful Response Body: 
     ```json
     {
@@ -592,7 +592,7 @@ You can use either swagger or redoc to browse the API docs and try out the reque
 
 - **POST /businesses**
   - Description: Registeres a new business
-  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+  - Prerequisites: The request user must be non-employee.
   - Request Body:
     ```json
     {
@@ -613,67 +613,214 @@ You can use either swagger or redoc to browse the API docs and try out the reque
     }
     ```
 
-- **GET /suppliers/{id}**
-  - Description: Returns details about a supplier queried by id.
-  - Prerequisites: The request user must be a superuser.
+- **GET /businesses/{id}**
+  - Description: Returns details about a business queried by id.
+  - Prerequisites: The request user must be a superuser or the owner of the business.
   - Successful Response Body: 
     ```json
     {
         "id": 0,
+        "created_at": "2025-02-07T16:13:38.983Z",
+        "updated_at": "2025-02-07T16:13:38.983Z",
         "name": "string",
-        "phone": "945367584",
-        "email": "user@example.com",
-        "address": "string"
+        "address": "string",
+        "category": "string",
+        "owner": 0
     }
     ```
 
-- **PUT /suppliers/{id}**
-  - Description: Edits all the fields of a supplier.
-  - Prerequisites: The request user must be a superuser.
+- **PUT /businesses/{id}**
+  - Description: Edits all the fields of a business.
+  - Prerequisites: The request user must be a superuser or the owner of the business.
   - Request Body:
     ```json
     {
         "name": "string",
-        "phone": "959346791",
-        "email": "user@example.com",
-        "address": "string"
+        "address": "string",
+        "category": "string",
+        "owner": 0
     }
     ```
   - Successful Response Body: 
     ```json
     {
         "id": 0,
+        "created_at": "2025-02-07T16:14:28.579Z",
+        "updated_at": "2025-02-07T16:14:28.580Z",
         "name": "string",
-        "phone": "947028458",
-        "email": "user@example.com",
-        "address": "string"
+        "address": "string",
+        "category": "string",
+        "owner": 0
     }
     ```
 
-- **PATCH /suppliers/{id}**
-  - Description: Edits one or more of the fields shown in the example request body of a supplier
-  - Prerequisites: The request user must be a superuser.
+- **PATCH /businesses/{id}**
+  - Description: Edits one or more of the fields shown in the example request body of a business
+  - Prerequisites: The request user must be a superuser or the owner of the business.
   - Request Body:
     ```json
     {
         "name": "string",
-        "phone": "959346791",
-        "email": "user@example.com",
-        "address": "string"
+        "address": "string",
+        "category": "string",
+        "owner": 0
     }
     ```
   - Successful Response Body: 
     ```json
     {
         "id": 0,
+        "created_at": "2025-02-07T16:14:28.579Z",
+        "updated_at": "2025-02-07T16:14:28.580Z",
         "name": "string",
-        "phone": "947028458",
-        "email": "user@example.com",
-        "address": "string"
+        "address": "string",
+        "category": "string",
+        "owner": 0
     }
     ```
 
-- **DELETE /suppliers/{id}**
-  - Description: Deletes a supplier.
-  - Prerequisites: The request user must be a superuser or the owner of the queried account.
+- **DELETE /businesses/{id}**
+  - Description: Deletes a business.
+  - Prerequisites: The request user must be a superuser or the owner of the queried business.
   - On success it sends out a 204 http status code with no response body
+
+### Employee management APIs
+
+- **POST /employee/invite/**
+  - Description: Sends an invite email to a person with a token
+  - Prerequisites: The request user must be a superuser, owner of a business, Admin of a business or Manager of a business. Admins can send invitations to potential managers and sales. Managers can send invitation to potential sales.
+  - Request Body:
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "string",
+        "role": "Manager",
+        "business": 0
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "string",
+        "role": "Manager",
+        "business": 0
+    }
+    ```
+
+- **POST /employee/invite/accept/{token}/**
+  - Description: Adds an employee to a business
+  - Prerequisites: The token must be correct
+  - Successful Response: 200 Status code
+
+- **GET /employees?page={page_number}**
+  - Description: Returns a list of registered employees paginated 10 at a time.
+  - Prerequisites: Must be a superuser.
+  - Successful Response Body: 
+    ```json
+    {
+        "count": 123,
+        "next": "http://api.example.org/accounts/?page=4",
+        "previous": "http://api.example.org/accounts/?page=2",
+        "results": [
+          {
+            "id": 0,
+            "email": "user@example.com",
+            "first_name": "string",
+            "last_name": "string",
+            "phone": "756687601",
+            "role": "Manager",
+            "created_by": 0,
+            "business": 0
+          }
+        ]
+    }
+    ```
+
+- **GET /employees/{id}**
+  - Description: Returns details about an employee queried by id.
+  - Prerequisites: The request user must be a superuser or the owner of the business.
+  - Successful Response Body: 
+    ```json
+    {
+        "id": 0,
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "796472798",
+        "role": "Manager",
+        "created_by": 0,
+        "business": 0
+    }
+    ```
+
+- **PUT /employees/{id}**
+  - Description: Edits all the fields of an employee.
+  - Prerequisites: The request user must be a superuser or the owner of the business or the employee requested.
+  - Request Body:
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "717725544",
+        "password": "string",
+        "role": "Manager",
+        "created_by": 0,
+        "business": 0
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "717725544",
+        "password": "string",
+        "role": "Manager",
+        "created_by": 0,
+        "business": 0
+    }
+    ```
+
+- **PATCH /businesses/{id}**
+  - Description: Edits one or more of the fields shown in the example request body of an employee
+  - Prerequisites: The request user must be a superuser or the owner of the business or the employee requested.
+  - Request Body:
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "717725544",
+        "password": "string",
+        "role": "Manager",
+        "created_by": 0,
+        "business": 0
+    }
+    ```
+  - Successful Response Body: 
+    ```json
+    {
+        "email": "user@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "phone": "717725544",
+        "password": "string",
+        "role": "Manager",
+        "created_by": 0,
+        "business": 0
+    }
+    ```
+
+- **DELETE /employees/{id}**
+  - Description: Deletes an employee.
+  - Prerequisites: The request user must be a superuser or the owner of the queried business or the employee requested.
+  - On success it sends out a 204 http status code with no response body
+
+
