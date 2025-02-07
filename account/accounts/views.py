@@ -1,3 +1,4 @@
+import json
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 from rest_framework import generics, status, viewsets
@@ -30,6 +31,12 @@ from .permissions import (
 from .models import User, Supplier, Customer, Business, Employee
 from django.shortcuts import render
 from rest_framework_simplejwt.tokens import AccessToken
+import requests
+from django.conf import settings
+from .models import EmployeeInvitation
+from .serializers import (
+    EmployeeInvitationSerializer,
+)  # create one for invitation if needed
 
 User = get_user_model()
 
@@ -140,10 +147,16 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
 
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Direct employee creation is forbidden. Use the invitation endpoint."
+            },
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
     def get_permissions(self):
-        if self.action == "create":
-            self.permission_classes = [IsAuthenticated, EmployeeCreatePermission]
-        elif self.action in ["update", "partial_update"]:
+        if self.action in ["update", "partial_update"]:
             self.permission_classes = [
                 IsAuthenticated,
                 IsOwnerOrAdmin,
@@ -184,6 +197,90 @@ class JWTTokenVerifyView(TokenVerifyView):
             {"detail": "Token is valid", "user": user_data},
             status=status.HTTP_200_OK,
         )
+
+
+class EmployeeInvitationCreateView(generics.CreateAPIView):
+    """
+    Creates an invitation for an employee and sends an invitation email.
+    """
+
+    serializer_class = EmployeeInvitationSerializer
+    permission_classes = [IsAuthenticated, EmployeeCreatePermission]
+
+    def perform_create(self, serializer):
+        invitation = serializer.save(created_by=self.request.user)
+        # Construct the acceptance URL. Adjust BASE_URL as appropriate.
+        request = self.request
+        acceptance_link = f"{request.scheme}://{request.get_host()}/employee/invite/accept/{invitation.token}/"
+        # Send invitation email via NOTIFICATION_API.
+        email_url = settings.EMAIL_URL
+        notification_api_key = settings.NOTIFICATION_API_KEY
+        payload = json.dumps(
+            {
+                "subject": "You're Invited to Join as an Employee",
+                "message": f"Please click the following link to accept your invitation: {acceptance_link}",
+                "recipients": invitation.email,
+            }
+        )
+        headers = {
+            "Authorization": f"Api-Key {notification_api_key}",
+            "Content-Type": "application/json",
+        }
+        response = requests.request("POST", email_url, headers=headers, data=payload)
+
+
+class EmployeeInvitationAcceptView(generics.GenericAPIView):
+    """
+    Accepts an invitation to become an employee immediately when the invitation link is clicked.
+    Processes the invitation via a GET request and returns a JSON response.
+    """
+
+    def get(self, request, token):
+        try:
+            invitation = EmployeeInvitation.objects.get(token=token, accepted=False)
+        except EmployeeInvitation.DoesNotExist:
+            return Response(
+                {"detail": "Invalid or expired invitation token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create the employee using invitation data with a temporary password.
+        employee = Employee.objects.create_user(
+            email=invitation.email,
+            phone=invitation.phone,
+            password="password",  # Temporary password
+            business=invitation.business,
+        )
+        employee.first_name = invitation.first_name
+        employee.last_name = invitation.last_name
+        employee.role = invitation.role
+        employee.save()
+
+        # Mark invitation as accepted.
+        invitation.accepted = True
+        invitation.save()
+
+        # Send congratulatory email via NOTIFICATION_API.
+        email_url = settings.EMAIL_URL
+        notification_api_key = settings.NOTIFICATION_API_KEY
+        payload = json.dumps(
+            {
+                "subject": "Welcome Aboard!",
+                "message": (
+                    "Congratulations on joining our team. Your default password is 'password'. "
+                    "Please change it after logging in."
+                ),
+                "recipients": invitation.email,
+            }
+        )
+        headers = {
+            "Authorization": f"Api-Key {notification_api_key}",
+            "Content-Type": "application/json",
+        }
+        requests.request("POST", email_url, headers=headers, data=payload)
+
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 def api_documentation(request):

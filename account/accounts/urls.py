@@ -18,6 +18,8 @@ from .views import (
     CustomTokenObtainPairView,
     JWTTokenVerifyView,
     api_documentation,
+    EmployeeInvitationCreateView,
+    EmployeeInvitationAcceptView,
 )
 
 router = DefaultRouter()
@@ -44,4 +46,14 @@ urlpatterns = [
         name="password-reset-confirm",
     ),
     path("password-change/", PasswordChangeView.as_view(), name="password-change"),
+    path(
+        "employee/invite/",
+        EmployeeInvitationCreateView.as_view(),
+        name="employee-invite",
+    ),
+    path(
+        "employee/invite/accept/<uuid:token>/",
+        EmployeeInvitationAcceptView.as_view(),
+        name="employee-invite-accept",
+    ),
 ] + router.urls

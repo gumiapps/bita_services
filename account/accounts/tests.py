@@ -4,7 +4,10 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Supplier, Customer, Business, Employee
+from .models import User, Supplier, Customer, Business, Employee, EmployeeInvitation
+import json
+from unittest.mock import patch
+
 
 env = Env()
 env.read_env()
@@ -808,87 +811,7 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         headers.update(self.get_api_key())
         return headers
 
-    # ----- Creation Tests -----
-    def test_create_employee_by_business_owner(self):
-        """
-        Business owner can create any employee (including Admin).
-        """
-        url = reverse("employee-list")
-        data = {
-            "email": "newemployee@example.com",
-            "first_name": "New",
-            "last_name": "Employee",
-            "phone": "912345605",
-            "password": "newpass123",
-            "role": "Admin",
-            "created_by": self.owner_user.id,
-            "business": self.business.id,
-        }
-        headers = self.get_auth_headers(self.owner_user)
-        response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data.get("role"), "Admin")
-
-    def test_create_employee_by_admin_employee_allowed_roles(self):
-        """
-        An employee with Admin role can create Manager or Sales employees.
-        """
-        url = reverse("employee-list")
-        # Allowed: creating a Manager employee
-        data = {
-            "email": "manager1@example.com",
-            "first_name": "Manager",
-            "last_name": "One",
-            "phone": "912345606",
-            "password": "managerpass1",
-            "role": "Manager",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers = self.get_auth_headers(self.admin_employee_creator)
-        response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Allowed: creating a Sales employee
-        data["email"] = "sales1@example.com"
-        data["role"] = "Sales"
-        data["phone"] = "912345607"
-        response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Not allowed: trying to create an Admin employee by non-owner creator
-        data["email"] = "admin2@example.com"
-        data["role"] = "Admin"
-        data["phone"] = "912345608"
-        response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_create_employee_by_manager_employee_allowed_roles(self):
-        """
-        A Manager employee can only create Sales employees.
-        """
-        url = reverse("employee-list")
-        headers = self.get_auth_headers(self.manager_employee_creator)
-        # Allowed: creating a Sales employee
-        data = {
-            "email": "sales2@example.com",
-            "first_name": "Sales",
-            "last_name": "Two",
-            "phone": "912345609",
-            "password": "salespass2",
-            "role": "Sales",
-            "created_by": self.manager_employee_creator.id,
-            "business": self.business.id,
-        }
-        response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Not allowed: creating a Manager employee
-        data["email"] = "manager2@example.com"
-        data["role"] = "Manager"
-        data["phone"] = "912345610"
-        response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    # ----- Creation Tests ----- #
 
     def test_create_employee_by_sales_user_forbidden(self):
         """
@@ -907,7 +830,7 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
             "business": self.business.id,
         }
         response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_create_employee_without_business_fails(self):
         """
@@ -925,7 +848,107 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         }
         headers = self.get_auth_headers(self.owner_user)
         response = self.client.post(url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_direct_employee_create_for_business_owner_forbidden(self):
+        """
+        Direct employee creation should be forbidden even for a business owner.
+        """
+        url = reverse("employee-list")
+        data = {
+            "email": "newemployee@example.com",
+            "first_name": "New",
+            "last_name": "Employee",
+            "phone": "912345605",
+            "password": "newpass123",
+            "role": "Admin",
+            "created_by": self.owner_user.id,
+            "business": self.business.id,
+        }
+        headers = self.get_auth_headers(self.owner_user)
+        response = self.client.post(url, data, format="json", **headers)
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED,
+            "Direct creation should be forbidden. Use the invitation endpoint.",
+        )
+
+    def test_direct_employee_create_for_admin_employee_forbidden(self):
+        """
+        An employee with Admin role should not be able to directly create employees.
+        """
+        url = reverse("employee-list")
+        # Even allowed roles (Manager, Sales) must be created via invitation.
+        data = {
+            "email": "manager1@example.com",
+            "first_name": "Manager",
+            "last_name": "One",
+            "phone": "912345606",
+            "password": "managerpass1",
+            "role": "Manager",
+            "created_by": self.admin_employee_creator.id,
+            "business": self.business.id,
+        }
+        headers = self.get_auth_headers(self.admin_employee_creator)
+        response = self.client.post(url, data, format="json", **headers)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_direct_employee_create_for_manager_employee_forbidden(self):
+        """
+        A Manager employee should not be able to directly create an employee.
+        """
+        url = reverse("employee-list")
+        data = {
+            "email": "sales2@example.com",
+            "first_name": "Sales",
+            "last_name": "Two",
+            "phone": "912345609",
+            "password": "salespass2",
+            "role": "Sales",
+            "created_by": self.manager_employee_creator.id,
+            "business": self.business.id,
+        }
+        headers = self.get_auth_headers(self.manager_employee_creator)
+        response = self.client.post(url, data, format="json", **headers)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_direct_employee_create_by_sales_user_forbidden(self):
+        """
+        A Sales role user cannot create any employee via the direct creation API.
+        """
+        url = reverse("employee-list")
+        data = {
+            "email": "sales3@example.com",
+            "first_name": "Sales",
+            "last_name": "Three",
+            "phone": "912345611",
+            "password": "salespass3",
+            "role": "Sales",
+            "created_by": self.sales_user.id,
+            "business": self.business.id,
+        }
+        headers = self.get_auth_headers(self.sales_user)
+        response = self.client.post(url, data, format="json", **headers)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_direct_employee_create_without_business_fails(self):
+        """
+        Creating an employee without providing a business should be forbidden.
+        """
+        url = reverse("employee-list")
+        data = {
+            "email": "nobiz@example.com",
+            "first_name": "No",
+            "last_name": "Biz",
+            "phone": "912345612",
+            "password": "nopass",
+            "role": "Sales",
+            "created_by": self.owner_user.id,
+        }
+        headers = self.get_auth_headers(self.owner_user)
+        response = self.client.post(url, data, format="json", **headers)
+        # Even without business the direct creation must be blocked.
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     # ----- Update Tests -----
     def test_creator_can_update_employee_with_valid_role_change(self):
@@ -933,25 +956,23 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         A creator (with Admin role) can update an employee's role within allowed range.
         For an Admin creator, allowed role changes are to Manager or Sales.
         """
-        # First, create an employee with Sales role by admin_employee_creator.
-        create_url = reverse("employee-list")
-        data = {
-            "email": "update1@example.com",
-            "first_name": "Update",
-            "last_name": "One",
-            "phone": "912345613",
-            "password": "updatepass1",
-            "role": "Sales",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers = self.get_auth_headers(self.admin_employee_creator)
-        response = self.client.post(create_url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        employee_id = response.data.get("id")
+        # Directly create an employee with Sales role via the model, bypassing the API.
+        employee = Employee.objects.create_user(
+            email="update1@example.com",
+            first_name="Update",
+            last_name="One",
+            phone="912345613",
+            password="updatepass1",
+            business=self.business,
+            created_by=self.admin_employee_creator,
+        )
+        employee.role = "Sales"
+        employee.save(update_fields=["role"])
+        employee_id = employee.id
         detail_url = reverse("employee-detail", args=[employee_id])
 
         # Now update role from Sales to Manager (allowed)
+        headers = self.get_auth_headers(self.admin_employee_creator)
         update_data = {"role": "Manager"}
         response = self.client.patch(detail_url, update_data, format="json", **headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -961,25 +982,23 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         """
         A creator with Manager role cannot upgrade an employee. Only Sales allowed.
         """
-        # Create an employee with Sales role by manager_employee_creator.
-        create_url = reverse("employee-list")
-        data = {
-            "email": "update2@example.com",
-            "first_name": "Update",
-            "last_name": "Two",
-            "phone": "912345614",
-            "password": "updatepass2",
-            "role": "Sales",
-            "created_by": self.manager_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers = self.get_auth_headers(self.manager_employee_creator)
-        response = self.client.post(create_url, data, format="json", **headers)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        employee_id = response.data.get("id")
+        # Direct employee creation with Sales role by manager_employee_creator.
+        employee = Employee.objects.create_user(
+            email="update2@example.com",
+            first_name="Update",
+            last_name="Two",
+            phone="912345614",
+            password="updatepass2",
+            business=self.business,
+            created_by=self.manager_employee_creator,
+        )
+        employee.role = "Sales"
+        employee.save(update_fields=["role"])
+        employee_id = employee.id
         detail_url = reverse("employee-detail", args=[employee_id])
 
         # Try to update role from Sales to Manager (not allowed for Manager creators)
+        headers = self.get_auth_headers(self.manager_employee_creator)
         update_data = {"role": "Manager"}
         response = self.client.patch(detail_url, update_data, format="json", **headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -988,22 +1007,19 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         """
         A user who is not the creator, business owner, or admin should not be able to update an employee.
         """
-        # Create an employee by the admin employee creator.
-        create_url = reverse("employee-list")
-        data = {
-            "email": "update3@example.com",
-            "first_name": "Update",
-            "last_name": "Three",
-            "phone": "912345615",
-            "password": "updatepass3",
-            "role": "Sales",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers_creator = self.get_auth_headers(self.admin_employee_creator)
-        response = self.client.post(create_url, data, format="json", **headers_creator)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        employee_id = response.data.get("id")
+        # Directly create an employee by the admin employee creator.
+        employee = Employee.objects.create_user(
+            email="update3@example.com",
+            first_name="Update",
+            last_name="Three",
+            phone="912345615",
+            password="updatepass3",
+            business=self.business,
+            created_by=self.admin_employee_creator,
+        )
+        employee.role = "Sales"
+        employee.save(update_fields=["role"])
+        employee_id = employee.id
         detail_url = reverse("employee-detail", args=[employee_id])
 
         # Attempt update by a regular user (not creator, owner, or admin)
@@ -1019,22 +1035,19 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         """
         Business owner can delete an employee.
         """
-        # Create an employee by admin_employee_creator.
-        create_url = reverse("employee-list")
-        data = {
-            "email": "delete1@example.com",
-            "first_name": "Delete",
-            "last_name": "One",
-            "phone": "912345616",
-            "password": "deletepass1",
-            "role": "Sales",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers_creator = self.get_auth_headers(self.admin_employee_creator)
-        response = self.client.post(create_url, data, format="json", **headers_creator)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        employee_id = response.data.get("id")
+        # Directly create an employee without using the API.
+        employee = Employee.objects.create_user(
+            email="delete1@example.com",
+            first_name="Delete",
+            last_name="One",
+            phone="912345616",
+            password="deletepass1",
+            business=self.business,
+            created_by=self.admin_employee_creator,
+        )
+        employee.role = "Sales"
+        employee.save(update_fields=["role"])
+        employee_id = employee.id
         detail_url = reverse("employee-detail", args=[employee_id])
 
         # Delete with business owner credentials
@@ -1047,22 +1060,18 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         """
         An employee with Admin role (or system admin) can delete an employee.
         """
-        # Create an employee by manager_employee_creator.
-        create_url = reverse("employee-list")
-        data = {
-            "email": "delete2@example.com",
-            "first_name": "Delete",
-            "last_name": "Two",
-            "phone": "912345617",
-            "password": "deletepass2",
-            "role": "Sales",
-            "created_by": self.manager_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers_creator = self.get_auth_headers(self.manager_employee_creator)
-        response = self.client.post(create_url, data, format="json", **headers_creator)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        employee_id = response.data.get("id")
+        employee = Employee.objects.create_user(
+            email="delete2@example.com",
+            first_name="Delete",
+            last_name="Two",
+            phone="912345617",
+            password="deletepass2",
+            business=self.business,
+            created_by=self.manager_employee_creator,
+        )
+        employee.role = "Sales"
+        employee.save(update_fields=["role"])
+        employee_id = employee.id
         detail_url = reverse("employee-detail", args=[employee_id])
 
         # Delete with an Admin role user (admin_employee_creator)
@@ -1075,22 +1084,19 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         """
         A creator (if not business owner or Admin) cannot delete an employee.
         """
-        # Create an employee by manager_employee_creator.
-        create_url = reverse("employee-list")
-        data = {
-            "email": "delete3@example.com",
-            "first_name": "Delete",
-            "last_name": "Three",
-            "phone": "912345618",
-            "password": "deletepass3",
-            "role": "Sales",
-            "created_by": self.manager_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers_creator = self.get_auth_headers(self.manager_employee_creator)
-        response = self.client.post(create_url, data, format="json", **headers_creator)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        employee_id = response.data.get("id")
+        # Direct creation of an employee by manager_employee_creator.
+        employee = Employee.objects.create_user(
+            email="delete3@example.com",
+            first_name="Delete",
+            last_name="Three",
+            phone="912345618",
+            password="deletepass3",
+            business=self.business,
+            created_by=self.manager_employee_creator,
+        )
+        employee.role = "Sales"
+        employee.save(update_fields=["role"])
+        employee_id = employee.id
         detail_url = reverse("employee-detail", args=[employee_id])
 
         # Attempt deletion by the creator (Manager) who is not allowed to delete
@@ -1105,39 +1111,31 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         """
         create_url = reverse("employee-list")
         headers_admin = self.get_auth_headers(self.admin_employee_creator)
-        # Create a Manager employee using admin_employee_creator.
-        manager_data = {
-            "email": "newmanager@example.com",
-            "first_name": "New",
-            "last_name": "Manager",
-            "phone": "912345620",
-            "password": "managerpassnew",
-            "role": "Manager",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        response_manager = self.client.post(
-            create_url, manager_data, format="json", **headers_admin
+        # Directly create a Manager employee using the model with admin_employee_creator.
+        manager_employee = Employee.objects.create_user(
+            email="newmanager@example.com",
+            first_name="New",
+            last_name="Manager",
+            phone="912345620",
+            password="managerpassnew",
+            business=self.business,
+            created_by=self.admin_employee_creator,
         )
-        self.assertEqual(response_manager.status_code, status.HTTP_201_CREATED)
-        manager_id = response_manager.data.get("id")
+        manager_employee.role = "Manager"
+        manager_employee.save(update_fields=["role"])
+        manager_id = manager_employee.id
 
-        # Create a Sales employee using admin_employee_creator.
-        sales_data = {
-            "email": "newsales@example.com",
-            "first_name": "New",
-            "last_name": "Sales",
-            "phone": "912345621",
-            "password": "salespassnew",
-            "role": "Sales",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        response_sales = self.client.post(
-            create_url, sales_data, format="json", **headers_admin
+        # Directly create a Sales employee using direct creation
+        sales_employee = Employee.objects.create(
+            email="newsales@example.com",
+            first_name="New",
+            last_name="Sales",
+            phone="912345621",
+            business=self.business,
+            created_by=self.admin_employee_creator,
+            role="Sales",
         )
-        self.assertEqual(response_sales.status_code, status.HTTP_201_CREATED)
-        sales_id = response_sales.data.get("id")
+        sales_id = sales_employee.id
 
         # Admin retrieves the Manager
         url_manager = reverse("employee-detail", args=[manager_id])
@@ -1158,39 +1156,33 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         headers_admin = self.get_auth_headers(self.admin_employee_creator)
         headers_owner = self.get_auth_headers(self.owner_user)
 
-        # Create a Sales employee using admin_employee_creator.
-        sales_data = {
-            "email": "managercreatesales@example.com",
-            "first_name": "Manager",
-            "last_name": "Createsales",
-            "phone": "912345622",
-            "password": "salespassmgr",
-            "role": "Sales",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        response_sales = self.client.post(
-            create_url, sales_data, format="json", **headers_admin
+        # Create a Sales employee directly without using the API
+        sales_employee = Employee.objects.create_user(
+            email="managercreatesales@example.com",
+            first_name="Manager",
+            last_name="Createsales",
+            phone="912345622",
+            password="salespassmgr",
+            business=self.business,
+            created_by=self.admin_employee_creator,
         )
-        self.assertEqual(response_sales.status_code, status.HTTP_201_CREATED)
-        sales_id = response_sales.data.get("id")
+        sales_employee.role = "Sales"
+        sales_employee.save(update_fields=["role"])
+        sales_id = sales_employee.id
 
-        # Create an Admin employee using admin_employee_creator.
-        admin_data = {
-            "email": "newadmin@example.com",
-            "first_name": "New",
-            "last_name": "Admin",
-            "phone": "912345623",
-            "password": "adminpassnew",
-            "role": "Admin",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        response_admin = self.client.post(
-            create_url, admin_data, format="json", **headers_owner
+        # Directly create an Admin employee via model creation.
+        admin_employee = Employee.objects.create_user(
+            email="newadmin@example.com",
+            first_name="New",
+            last_name="Admin",
+            phone="912345623",
+            password="adminpassnew",
+            business=self.business,
+            created_by=self.admin_employee_creator,
         )
-        self.assertEqual(response_admin.status_code, status.HTTP_201_CREATED)
-        admin_id = response_admin.data.get("id")
+        admin_employee.role = "Admin"
+        admin_employee.save(update_fields=["role"])
+        admin_id = admin_employee.id
 
         # Manager retrieves the Sales employee (allowed)
         url_sales = reverse("employee-detail", args=[sales_id])
@@ -1212,26 +1204,135 @@ class EmployeeCRUDAPITestCase(BaseAPITestCase):
         response = self.client.get(url_self, **headers_sales)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Create another Sales employee using admin_employee_creator.
-        create_url = reverse("employee-list")
-        sales_data = {
-            "email": "othersales@example.com",
-            "first_name": "Other",
-            "last_name": "Sales",
-            "phone": "912345624",
-            "password": "othersalespass",
-            "role": "Sales",
-            "created_by": self.admin_employee_creator.id,
-            "business": self.business.id,
-        }
-        headers_admin = self.get_auth_headers(self.admin_employee_creator)
-        response_other = self.client.post(
-            create_url, sales_data, format="json", **headers_admin
+        # Create another Sales employee using direct employee creation.
+        other_sales = Employee.objects.create_user(
+            email="othersales@example.com",
+            first_name="Other",
+            last_name="Sales",
+            phone="912345624",
+            password="othersalespass",
+            business=self.business,
+            created_by=self.admin_employee_creator,
+            role="Sales",
         )
-        self.assertEqual(response_other.status_code, status.HTTP_201_CREATED)
-        other_sales_id = response_other.data.get("id")
+        other_sales_id = other_sales.id
 
         # Sales user trying to retrieve another Sales employee (not allowed)
         url_other_sales = reverse("employee-detail", args=[other_sales_id])
         response = self.client.get(url_other_sales, **headers_sales)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class EmployeeInvitationTestCase(BaseAPITestCase):
+    def setUp(self):
+        # Create a business owner and a business
+        self.owner_user = User.objects.create_user(
+            email="owner@example.com",
+            phone="912345601",
+            password="ownerpass",
+        )
+        self.business = Business.objects.create(
+            name="Invitation Business",
+            address="123 Invite Road",
+            category="Services",
+            owner=self.owner_user,
+        )
+        # Create a creator employee (e.g. Admin)
+        self.creator = Employee.objects.create_user(
+            email="creator@example.com",
+            phone="912345602",
+            password="creatorpass",
+            business=self.business,
+        )
+        self.creator.role = "Admin"
+        self.creator.save(update_fields=["role"])
+
+        self.invitation_create_url = reverse("employee-invite")
+        # The accept URL pattern expects a token argument.
+        # We'll build it dynamically in the acceptance test.
+
+    def get_auth_headers(self, user):
+        token = self.get_jwt_token(user)
+        headers = {
+            "HTTP_AUTHORIZATION": f"Bearer {token}",
+        }
+        headers.update(self.get_api_key())
+        return headers
+
+    @patch("accounts.views.requests.request")
+    def test_employee_invitation_create(self, mock_request):
+        """
+        Ensure that an invitation is created and an email is attempted to be sent.
+        """
+        # Simulate a successful email API call
+        mock_request.return_value.status_code = 200
+
+        data = {
+            "email": "invitee@example.com",
+            "first_name": "Invite",
+            "last_name": "Ees",
+            "phone": "912345610",
+            "role": "Sales",
+            "business": self.business.id,
+        }
+        headers = self.get_auth_headers(self.creator)
+        response = self.client.post(
+            self.invitation_create_url, data, format="json", **headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that an invitation object was created
+        invitation = EmployeeInvitation.objects.filter(
+            email="invitee@example.com"
+        ).first()
+        self.assertIsNotNone(invitation)
+        self.assertFalse(invitation.accepted)
+
+        # Assert that the email sending API was called
+        self.assertTrue(mock_request.called)
+        args, kwargs = mock_request.call_args
+        # Check that the payload contains the acceptance link with the invitation token.
+        payload = json.loads(kwargs.get("data", "{}"))
+        self.assertIn(str(invitation.token), payload.get("message", ""))
+
+    @patch("accounts.views.requests.request")
+    def test_employee_invitation_accept(self, mock_request):
+        """
+        Ensure that hitting the accept URL immediately creates the employee using a temporary password,
+        marks the invitation as accepted and attempts to send a congratulatory email.
+        """
+        # Simulate a successful email API call
+        mock_request.return_value.status_code = 200
+
+        # Create an invitation manually
+        invitation = EmployeeInvitation.objects.create(
+            email="invitee2@example.com",
+            first_name="Invitee",
+            last_name="Two",
+            phone="912345611",
+            role="Sales",
+            business=self.business,
+            created_by=self.creator,
+        )
+
+        accept_url = reverse("employee-invite-accept", args=[invitation.token])
+        headers = self.get_auth_headers(self.creator)
+
+        response = self.client.get(accept_url, **headers)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that the employee was created with temporary password "password"
+        employee = Employee.objects.filter(email="invitee2@example.com").first()
+        self.assertIsNotNone(employee)
+        self.assertEqual(employee.first_name, invitation.first_name)
+        self.assertEqual(employee.role, invitation.role)
+
+        # Invitation should be marked as accepted.
+        invitation.refresh_from_db()
+        self.assertTrue(invitation.accepted)
+
+        # Assert that the congratulatory email API was called.
+        self.assertTrue(mock_request.called)
+        args, kwargs = mock_request.call_args
+        payload = json.loads(kwargs.get("data", "{}"))
+        self.assertIn("Welcome Aboard", payload.get("subject", ""))

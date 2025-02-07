@@ -3,6 +3,7 @@ from django.db import models
 from django.core.validators import RegexValidator
 from .manager import CustomUserManager
 from django.conf import settings
+import uuid
 
 
 class TimeStampedModel(models.Model):
@@ -137,3 +138,26 @@ class Employee(User):
 
     def __str__(self):
         return f"{self.email} - {self.role}"
+
+
+class EmployeeInvitation(TimeStampedModel):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    email = models.EmailField()
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=15)
+    role = models.CharField(max_length=10, choices=Employee.ROLE_CHOICES)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="employee_invitations",
+    )
+    business = models.ForeignKey(
+        Business,
+        on_delete=models.CASCADE,
+        related_name="employee_invitations",
+    )
+    accepted = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Invitation for {self.email} - Accepted: {self.accepted}"

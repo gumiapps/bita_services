@@ -8,7 +8,7 @@ from rest_framework import serializers
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Supplier, Customer, Business, Employee
+from .models import Supplier, Customer, Business, Employee, EmployeeInvitation
 
 
 User = get_user_model()
@@ -74,7 +74,6 @@ class PasswordResetSerializer(serializers.Serializer):
             "Content-Type": "application/json",
         }
         response = requests.request("POST", email_url, headers=headers, data=payload)
-        print(response.text)
 
 
 class SetNewPasswordSerializer(serializers.Serializer):
@@ -190,3 +189,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
             employee.set_password(password)
         employee.save()
         return employee
+
+
+class EmployeeInvitationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeInvitation
+        fields = ["email", "first_name", "last_name", "phone", "role", "business"]

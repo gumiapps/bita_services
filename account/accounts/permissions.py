@@ -65,7 +65,12 @@ class EmployeeUpdatePermission(BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
         # Allow update if user is admin, business owner, or the creator.
-        if not (user.is_staff or obj.business.owner == user or obj.created_by == user):
+        if not (
+            user.is_staff
+            or obj.business.owner == user
+            or obj.created_by == user
+            or obj == user
+        ):
             return False
         # If not updating role, allow.
         if "role" not in request.data:
