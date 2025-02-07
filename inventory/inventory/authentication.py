@@ -20,7 +20,10 @@ class RemoteJWTAuthentication(BaseAuthentication):
         if scheme.lower() != "bearer":
             return None
 
-        response = requests.post(token_verify_url, data={"token": token})
+        headers = {"HTTP_X_API_KEY": settings.AUTH_SERVICE_API_KEY}
+        response = requests.post(
+            token_verify_url, data={"token": token}, headers=headers
+        )
         if response.status_code != 200:
             raise exceptions.AuthenticationFailed("Invalid or expired token.")
 
