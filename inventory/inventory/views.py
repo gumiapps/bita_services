@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db.models.aggregates import Count
 from django.contrib.postgres.search import TrigramSimilarity
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from .models import (
     Category,
@@ -14,6 +14,7 @@ from .models import (
     StockMovement,
     ReturnRecall,
     ItemImage,
+    SupplyReservation,
 )
 from .serializers import (
     CategorySerializer,
@@ -24,6 +25,7 @@ from .serializers import (
     StockMovementSerializer,
     ReturnRecallSerializer,
     ItemImageSerializer,
+    SupplyReservationSerializer,
 )
 
 # Create your views here.
@@ -96,3 +98,19 @@ class StockMovementViewSet(ModelViewSet):
 class ItemImageViewSet(ModelViewSet):
     queryset = ItemImage.objects.all()
     serializer_class = ItemImageSerializer
+
+
+class SupplyReservationViewSet(ModelViewSet):
+    queryset = SupplyReservation.objects.all()
+    serializer_class = SupplyReservationSerializer
+
+    @extend_schema(parameters=settings.SUPPLY_RESERVATION_LIST_QUERY_PARAMETERS)
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        return queryset

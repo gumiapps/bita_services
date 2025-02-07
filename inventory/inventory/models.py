@@ -215,3 +215,42 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"Movement {self.id}: {self.quantity} quantity of {self.supply.name} moved from {self.from_store.name} to {self.to_store.name}"
+
+
+class SupplyReservation(models.Model):
+    supply = models.ForeignKey(
+        Supply, on_delete=models.CASCADE, related_name="reservations"
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    reserved_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("active", "Active"),
+            ("cancelled", "Cancelled"),
+            ("fulfilled", "Fulfilled"),
+        ],
+        default="active",
+    )
+
+    class Meta:
+        db_table = "supply_reservation"
+        ordering = ["-reserved_at"]
+
+    def save(self, *args, **kwargs):
+        # Check if updating an existing record and status has changed to fulfilled.
+        if self.pk:
+            previous = SupplyReservation.objects.get(pk=self.pk)
+            if previous.status != "fulfilled" and self.status == "fulfilled":
+                # Reduce supply quantity by this reservation's quantity.
+                self.supply.quantity = self.supply.quantity - self.quantity
+                self.supply.save()
+        else:
+            # For new records, if the reservation is created as fulfilled.
+            if self.status == "fulfilled":
+                self.supply.quantity = self.supply.quantity - self.quantity
+                self.supply.save()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Reservation for {self.supply} - {self.quantity}"

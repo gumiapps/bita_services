@@ -157,5 +157,14 @@ ITEM_LIST_QUERY_PARAMETERS = [
     ),
 ]
 
+SUPPLY_RESERVATION_LIST_QUERY_PARAMETERS = [
+    OpenApiParameter(
+        name="status",
+        description="Filter by reservation status (active, cancelled, fulfilled)",
+        required=False,
+        type=OpenApiTypes.STR,
+    ),
+]
+
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL")
 AUTH_SERVICE_API_KEY = os.environ.get("AUTH_SERVICE_API_KEY")
