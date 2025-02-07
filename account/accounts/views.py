@@ -235,6 +235,8 @@ class EmployeeInvitationAcceptView(generics.GenericAPIView):
     Processes the invitation via a GET request and returns a JSON response.
     """
 
+    permission_classes = [AllowAny]
+
     def get(self, request, token):
         try:
             invitation = EmployeeInvitation.objects.get(token=token, accepted=False)
