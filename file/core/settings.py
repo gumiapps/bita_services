@@ -1,23 +1,17 @@
 
 from pathlib import Path
-
+from decouple import config
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+SECRET_KEY = config('SECRET_KEY')
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-
-
-SECRET_KEY = "django-insecure-8b8^@+e(xp859"
-
-
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
-
-
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -26,10 +20,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'drf_spectacular',
+    'rest_framework_api_key',
+    'rest_framework',
+
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,11 +55,33 @@ TEMPLATES = [
     },
 ]
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework_api_key.permissions.HasAPIKey',
+    ],
+    # YOUR SETTINGS
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'File service API',
+    'DESCRIPTION': 'file service',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {"ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "Authorization"}}
+    },
+    "SECURITY": [{"ApiKeyAuth": [],}],
+    'COMPONENT_SPLIT_REQUEST': True,
+}
+
+
+
 WSGI_APPLICATION = "core.wsgi.application"
-
-
-
-
 
 DATABASES = {
     "default": {
@@ -70,12 +91,9 @@ DATABASES = {
 }
 
 
-
-
-
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -87,7 +105,6 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
 
 
 
