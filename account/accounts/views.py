@@ -38,7 +38,7 @@ from .models import EmployeeInvitation
 from .serializers import (
     EmployeeInvitationSerializer,
 )  # create one for invitation if needed
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 
 User = get_user_model()
 
@@ -55,6 +55,19 @@ User = get_user_model()
     create=extend_schema(
         summary="Create User",
         description="Create a new user. (Registration endpoint)",
+        examples=[
+            OpenApiExample(
+                "Example 1",
+                value={
+                    "email": "user@example.com",
+                    "first_name": "string",
+                    "last_name": "string",
+                    "phone": "924530740",
+                    "password": "password",
+                },
+                request_only=True,  # Ensures this is only for requests
+            ),
+        ],
     ),
     retrieve=extend_schema(
         summary="Retrieve User",
