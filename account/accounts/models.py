@@ -131,10 +131,6 @@ class Employee(User):
         null=True,
         blank=True,
     )
-    business = models.ForeignKey(
-        Business, on_delete=models.CASCADE, related_name="employees"
-    )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
 
     def __str__(self):
         return f"{self.email} - {self.role}"
@@ -161,3 +157,9 @@ class EmployeeInvitation(TimeStampedModel):
 
     def __str__(self):
         return f"Invitation for {self.email} - Accepted: {self.accepted}"
+
+
+class EmployeeBusiness(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    role = models.CharField(max_length=10, choices=Employee.ROLE_CHOICES)

@@ -8,7 +8,14 @@ from rest_framework import serializers
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Supplier, Customer, Business, Employee, EmployeeInvitation
+from .models import (
+    Supplier,
+    Customer,
+    Business,
+    Employee,
+    EmployeeInvitation,
+    EmployeeBusiness,
+)
 
 
 User = get_user_model()
@@ -164,7 +171,25 @@ class BusinessSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class EmployeeBusinessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeBusiness
+        fields = ("business", "role")
+
+
 class EmployeeSerializer(serializers.ModelSerializer):
+    # This read_only field remains available for GET responses.
+    employee_businesses = EmployeeBusinessSerializer(
+        source="employeebusiness_set", many=True, read_only=True
+    )
+    # Write-only fields for update/delete operations.
+    business = serializers.PrimaryKeyRelatedField(
+        queryset=Business.objects.all(), write_only=True, required=False
+    )
+    role = serializers.ChoiceField(
+        choices=Employee.ROLE_CHOICES, write_only=True, required=False
+    )
+
     class Meta:
         model = Employee
         fields = (
@@ -174,21 +199,41 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "last_name",
             "phone",
             "password",
-            "role",
             "created_by",
+            "employee_businesses",
             "business",
+            "role",
         )
-        extra_kwargs = {
-            "password": {"write_only": True},
-        }
+        extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
         password = validated_data.pop("password", None)
+        # Remove business and role if they accidentally get passed during creation.
+        validated_data.pop("business", None)
+        validated_data.pop("role", None)
         employee = Employee(**validated_data)
         if password:
             employee.set_password(password)
         employee.save()
         return employee
+
+    def update(self, instance, validated_data):
+        business = validated_data.pop("business", None)
+        role = validated_data.pop("role", None)
+        # Update any other Employee fields.
+        instance = super().update(instance, validated_data)
+        if business and role:
+            try:
+                eb = EmployeeBusiness.objects.get(employee=instance, business=business)
+                # Update the role if different.
+                if eb.role != role:
+                    eb.role = role
+                    eb.save()
+            except EmployeeBusiness.DoesNotExist:
+                EmployeeBusiness.objects.create(
+                    employee=instance, business=business, role=role
+                )
+        return instance
 
 
 class EmployeeInvitationSerializer(serializers.ModelSerializer):

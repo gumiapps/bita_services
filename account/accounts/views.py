@@ -29,7 +29,7 @@ from .permissions import (
     EmployeeRetrievePermission,
     IsNonEmployeeUser,
 )
-from .models import User, Supplier, Customer, Business, Employee
+from .models import EmployeeBusiness, User, Supplier, Customer, Business, Employee
 from django.shortcuts import render
 from rest_framework_simplejwt.tokens import AccessToken
 import requests
@@ -96,6 +96,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
 
 class PasswordChangeView(generics.UpdateAPIView):
     serializer_class = PasswordChangeSerializer
+    http_method_names = ["put"]
 
     def get_object(self):
         return self.request.user
@@ -111,9 +112,6 @@ class PasswordChangeView(generics.UpdateAPIView):
         return Response(
             {"detail": "Password has been changed."}, status=status.HTTP_200_OK
         )
-
-    def partial_update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PATCH")
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -149,22 +147,11 @@ class BusinessViewSet(viewsets.ModelViewSet):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
-
-    def create(self, request, *args, **kwargs):
-        return Response(
-            {
-                "detail": "Direct employee creation is forbidden. Use the invitation endpoint."
-            },
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+    http_method_names = ["get", "put", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
         if self.action in ["update", "partial_update"]:
-            self.permission_classes = [
-                IsAuthenticated,
-                IsOwnerOrAdmin,
-                EmployeeUpdatePermission,
-            ]
+            self.permission_classes = [IsAuthenticated, EmployeeUpdatePermission]
         elif self.action == "destroy":
             self.permission_classes = [IsAuthenticated, EmployeeDeletePermission]
         elif self.action == "retrieve":
@@ -172,6 +159,48 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         else:
             self.permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return super().get_permissions()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        business_id = request.data.get("business")
+        role = request.data.get("role")
+        if business_id and role:
+            try:
+                eb = EmployeeBusiness.objects.get(
+                    employee=instance, business_id=business_id, role=role
+                )
+                eb.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except EmployeeBusiness.DoesNotExist:
+                return Response(
+                    {"detail": "EmployeeBusiness instance not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            return Response(
+                {"detail": "Business and role are required for deletion."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def update(self, request, *args, **kwargs):
+        if "employee_businesses" in request.data:
+            return Response(
+                {
+                    "detail": "Updating multiple businesses and roles directly is not allowed. Please use business and role fields."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if "employee_businesses" in request.data:
+            return Response(
+                {
+                    "detail": "Updating multiple businesses and roles directly is not allowed. Please use business and role fields."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().partial_update(request, *args, **kwargs)
 
 
 class JWTTokenVerifyView(TokenVerifyView):
@@ -253,12 +282,15 @@ class EmployeeInvitationAcceptView(generics.GenericAPIView):
         employee = Employee.objects.create_user(
             email=invitation.email,
             phone=invitation.phone,
-            password="password",  # Temporary password
+            password="password",
+        )
+        EmployeeBusiness.objects.create(
+            employee=employee,
             business=invitation.business,
+            role=invitation.role,
         )
         employee.first_name = invitation.first_name
         employee.last_name = invitation.last_name
-        employee.role = invitation.role
         employee.created_by = invitation.created_by
         employee.save()
 
