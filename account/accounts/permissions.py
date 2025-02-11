@@ -1,10 +1,10 @@
 from rest_framework.permissions import BasePermission
-from .models import Business, Employee
+from .models import Business, Employee, EmployeeBusiness
 
 
 class IsOwnerOrAdmin(BasePermission):
     """
-    Custom permission to only allow owners of an object or admin users to edit or delete it.
+    Only allow owners of an object or admin users to edit or delete it.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -15,8 +15,7 @@ class IsOwnerOrAdmin(BasePermission):
 
 class IsBusinessOwnerOrAdmin(BasePermission):
     """
-    Custom permission that allows editing or deleting a Business only if the
-    current user is the owner of the business or an admin.
+    Allow editing or deleting a Business only if the user is its owner or is an admin.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -25,10 +24,10 @@ class IsBusinessOwnerOrAdmin(BasePermission):
 
 class EmployeeCreatePermission(BasePermission):
     """
-    Allow creation only if:
-      - The current user is the business owner or a staff user, OR
-      - The current user has role 'Admin' and is creating a 'Manager' or 'Sales', OR
-      - The current user has role 'Manager' and is creating a 'Sales'.
+    Allow employee creation only if:
+      - The user is the owner of the given business or a staff user, OR
+      - The user has an EmployeeBusiness record on that business with role 'Admin'
+        (allowed to create Manager or Sales) or role 'Manager' (allowed to create Sales).
     """
 
     def has_permission(self, request, view):
@@ -45,95 +44,108 @@ class EmployeeCreatePermission(BasePermission):
         user = request.user
         if business.owner == user or user.is_staff:
             return True
-        employee = Employee.objects.get(id=user.id)
-        if employee.role == "Admin" and new_role in ("Manager", "Sales"):
+        try:
+            requester_eb = EmployeeBusiness.objects.get(
+                business=business, employee=user
+            )
+        except EmployeeBusiness.DoesNotExist:
+            return False
+        if requester_eb.role == "Admin" and new_role in ("Manager", "Sales"):
             return True
-        elif employee.role == "Manager" and new_role == "Sales":
+        elif requester_eb.role == "Manager" and new_role == "Sales":
             return True
         return False
 
 
 class EmployeeUpdatePermission(BasePermission):
     """
-    Allow updating if the user is the creator, business owner,
-    or staff; and if updating role, enforce:
-      - Business owner or staff can change to anything.
-      - Otherwise, 'Admin' can change only to 'Manager' or 'Sales',
-        and 'Manager' only to 'Sales'.
+    Allow updating an employee’s non-role fields if the user is staff, the creator, or updating their own record.
+    And if updating a role using the write-only "business" and "role" fields,
+    only allow it if the user is either the owner of that business, staff,
+    or has an EmployeeBusiness record on that business with sufficient privileges:
+      - 'Admin' can update to Manager or Sales,
+      - 'Manager' can update only to Sales.
     """
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        # Allow update if user is admin, business owner, or the creator.
-        if not (
-            user.is_staff
-            or obj.business.owner == user
-            or obj.created_by == user
-            or obj == user
-        ):
+        base_permission = user.is_staff or obj.id == user.id or obj.created_by == user
+
+        # If no role update is attempted, allow update if base permission holds.
+        business = request.data.get("business")
+        role = request.data.get("role")
+        if not business and not role:
+            return base_permission
+
+        # For updates that include a business/role change, check permission for that business.
+        try:
+            biz = Business.objects.get(id=business)
+        except Business.DoesNotExist:
             return False
-        # If not updating role, allow.
-        if "role" not in request.data:
+        if biz.owner == user or user.is_staff:
             return True
-        new_role = request.data.get("role")
-        # Business owner or staff can update without extra checks.
-        if obj.business.owner == user or user.is_staff:
+        try:
+            requester_eb = EmployeeBusiness.objects.get(business=biz, employee=user)
+        except EmployeeBusiness.DoesNotExist:
+            return False
+        if requester_eb.role == "Admin" and role in ("Manager", "Sales"):
             return True
-        employee = Employee.objects.get(id=user.id)
-        if employee.role == "Admin" and new_role in ("Manager", "Sales"):
-            return True
-        elif employee.role == "Manager" and new_role == "Sales":
+        elif requester_eb.role == "Manager" and role == "Sales":
             return True
         return False
 
 
 class EmployeeDeletePermission(BasePermission):
     """
-    Allow deletion only if the current user is the business owner,
-    a staff user, or has role 'Admin'.
+    Allow deletion of an EmployeeBusiness instance (and thus removal of an employee's role on a business)
+    only if the user is staff or, for at least one business linked to the target, is either
+    its owner or has an EmployeeBusiness record with role 'Admin'.
     """
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if obj.business.owner == user or user.is_staff:
+        if user.is_staff:
             return True
-        employee = Employee.objects.get(id=user.id)
-        if employee.role == "Admin":
-            return True
+        ebs = EmployeeBusiness.objects.filter(employee=obj)
+        for eb in ebs:
+            if eb.business.owner == user:
+                return True
+            try:
+                requester_eb = EmployeeBusiness.objects.get(
+                    business=eb.business, employee=user
+                )
+            except EmployeeBusiness.DoesNotExist:
+                continue
+            if requester_eb.role == "Admin":
+                return True
         return False
 
 
 class EmployeeRetrievePermission(BasePermission):
     """
-    Allow retrieval if:
-      - The request user is retrieving his/her own record, OR
-      - The request user is the owner of the business, OR
-      - The target employee has a higher role than the request user.
-    Role hierarchy: Sales (1) < Manager (2) < Admin (3)
+    Allow retrieval if the user is:
+      - Retrieving their own record, OR
+      - The owner of a business linked to the target employee, OR
+      - Has an EmployeeBusiness record on a common business with a higher role.
     """
 
     def has_object_permission(self, request, view, obj):
-        # Allow self‐retrieve
         if obj.id == request.user.id:
             return True
-
-        # Allow business owner (assuming the Employee is linked to a Business)
-        if hasattr(obj, "business") and obj.business.owner == request.user:
-            return True
-
-        # Get the roles using the Employee model so that the updated role is available.
-        try:
-            requester = Employee.objects.get(id=request.user.id)
-            target = Employee.objects.get(id=obj.id)
-        except Employee.DoesNotExist:
-            return False
-
         hierarchy = {"Sales": 1, "Manager": 2, "Admin": 3}
-        if requester.role not in hierarchy or target.role not in hierarchy:
-            return False
-
-        # Allow if target has a lower role value.
-        return hierarchy[target.role] < hierarchy[requester.role]
+        ebs = EmployeeBusiness.objects.filter(employee=obj)
+        for eb in ebs:
+            if eb.business.owner == request.user:
+                return True
+            try:
+                requester_eb = EmployeeBusiness.objects.get(
+                    business=eb.business, employee=request.user
+                )
+            except EmployeeBusiness.DoesNotExist:
+                continue
+            if hierarchy.get(requester_eb.role, 0) > hierarchy.get(eb.role, 0):
+                return True
+        return False
 
 
 class IsNonEmployeeUser(BasePermission):
