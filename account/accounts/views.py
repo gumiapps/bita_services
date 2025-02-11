@@ -38,10 +38,54 @@ from .models import EmployeeInvitation
 from .serializers import (
     EmployeeInvitationSerializer,
 )  # create one for invitation if needed
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 
 User = get_user_model()
 
 
+@extend_schema(
+    summary="User Management",
+    description="Retrieve, create, update, or delete users.",
+)
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Users",
+        description="Retrieve a list of all users. (Admin only)",
+    ),
+    create=extend_schema(
+        summary="Create User",
+        description="Create a new user. (Registration endpoint)",
+        examples=[
+            OpenApiExample(
+                "Example 1",
+                value={
+                    "email": "user@example.com",
+                    "first_name": "string",
+                    "last_name": "string",
+                    "phone": "924530740",
+                    "password": "password",
+                },
+                request_only=True,  # Ensures this is only for requests
+            ),
+        ],
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve User",
+        description="Retrieve a single user by its ID. (Admin or the user queried)",
+    ),
+    update=extend_schema(
+        summary="Update User",
+        description="Update a user completely.",
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update User",
+        description="Partially update a user instance.",
+    ),
+    destroy=extend_schema(
+        summary="Delete User",
+        description="Delete a user instance.",
+    ),
+)
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -54,6 +98,12 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Password Reset",
+        description="Send a password reset link to the user's email.",
+    ),
+)
 class PasswordResetView(generics.GenericAPIView):
     serializer_class = PasswordResetSerializer
 
@@ -68,6 +118,12 @@ class PasswordResetView(generics.GenericAPIView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Password Reset Confirm",
+        description="Confirm the password reset by setting a new password.",
+    ),
+)
 class PasswordResetConfirmView(generics.GenericAPIView):
     serializer_class = SetNewPasswordSerializer
 
@@ -94,6 +150,12 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         )
 
 
+@extend_schema_view(
+    put=extend_schema(
+        summary="Password Change",
+        description="Change the user's password.",
+    ),
+)
 class PasswordChangeView(generics.UpdateAPIView):
     serializer_class = PasswordChangeSerializer
     http_method_names = ["put"]
@@ -114,22 +176,106 @@ class PasswordChangeView(generics.UpdateAPIView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Login",
+        description="Obtain a new access token by exchanging username and password.",
+    ),
+)
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Suppliers",
+        description="Retrieve a list of all suppliers. (Admin only)",
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve Supplier",
+        description="Retrieve a single supplier by its ID. (Admin or the supplier queried)",
+    ),
+    create=extend_schema(
+        summary="Create Supplier",
+        description="Create a new supplier.",
+    ),
+    update=extend_schema(
+        summary="Update Supplier",
+        description="Update a supplier completely.",
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update Supplier",
+        description="Partially update a supplier instance.",
+    ),
+    destroy=extend_schema(
+        summary="Delete Supplier",
+        description="Delete a supplier instance.",
+    ),
+)
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Customers",
+        description="Retrieve a list of all customers. (Admin only)",
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve Customer",
+        description="Retrieve a single customer by its ID. (Admin or the customer queried)",
+    ),
+    create=extend_schema(
+        summary="Create Customer",
+        description="Create a new customer.",
+    ),
+    update=extend_schema(
+        summary="Update Customer",
+        description="Update a customer completely.",
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update Customer",
+        description="Partially update a customer instance.",
+    ),
+    destroy=extend_schema(
+        summary="Delete Customer",
+        description="Delete a customer instance.",
+    ),
+)
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Businesses",
+        description="Retrieve a list of all businesses. (Admin only)",
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve Business",
+        description="Retrieve a single business by its ID. (Admin or the business owner queried)",
+    ),
+    create=extend_schema(
+        summary="Create Business",
+        description="Create a new business.",
+    ),
+    update=extend_schema(
+        summary="Update Business",
+        description="Update a business completely.",
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update Business",
+        description="Partially update a business instance.",
+    ),
+    destroy=extend_schema(
+        summary="Delete Business",
+        description="Delete a business instance.",
+    ),
+)
 class BusinessViewSet(viewsets.ModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
@@ -144,6 +290,27 @@ class BusinessViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Employees",
+        description="Retrieve a list of all employees. (Admin only)",
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve Employee",
+        description="Retrieve a single employee by its ID. (Admin, business owner or the employee queried)",
+    ),
+    update=extend_schema(
+        summary="Update Employee", description="Update an employee completely."
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update Employee",
+        description="Partially update an employee instance.",
+    ),
+    destroy=extend_schema(
+        summary="Delete Employee Business Record",
+        description="Delete the EmployeeBusiness record for the employee using the provided business and role.",
+    ),
+)
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -203,6 +370,12 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return super().partial_update(request, *args, **kwargs)
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Token verification",
+        description="Verify the token and return user data.",
+    )
+)
 class JWTTokenVerifyView(TokenVerifyView):
     permission_classes = (AllowAny,)
 
@@ -231,6 +404,12 @@ class JWTTokenVerifyView(TokenVerifyView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Employee Invitation Create",
+        description="Create an invitation for an employee and send an invitation email.",
+    )
+)
 class EmployeeInvitationCreateView(generics.CreateAPIView):
     """
     Creates an invitation for an employee and sends an invitation email.
@@ -261,6 +440,12 @@ class EmployeeInvitationCreateView(generics.CreateAPIView):
         response = requests.request("POST", email_url, headers=headers, data=payload)
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Employee Invitation Accept",
+        description="Accept an invitation to become an employee immediately when the invitation link is clicked.",
+    )
+)
 class EmployeeInvitationAcceptView(generics.GenericAPIView):
     """
     Accepts an invitation to become an employee immediately when the invitation link is clicked.
@@ -278,12 +463,16 @@ class EmployeeInvitationAcceptView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Create the employee using invitation data with a temporary password.
-        employee = Employee.objects.create_user(
-            email=invitation.email,
-            phone=invitation.phone,
-            password="password",
-        )
+        # Check if an employee with the invitation email already exists.
+        if Employee.objects.filter(email=invitation.email).exists():
+            employee = Employee.objects.get(email=invitation.email)
+        else:
+            # Create the employee using invitation data with a temporary password.
+            employee = Employee.objects.create_user(
+                email=invitation.email,
+                phone=invitation.phone,
+                password="password",
+            )
         EmployeeBusiness.objects.create(
             employee=employee,
             business=invitation.business,
